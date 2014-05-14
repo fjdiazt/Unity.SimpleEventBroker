@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>Unity.SimpleEventBroker</id>
+        <version>0.0.0.1</version>
+        <title>Unity SimpleEventBroker</title>
+        <authors>Sander Struijk</authors>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>My package description.</description>
+        <copyright>Microsoft</copyright>
+        <tags>Unity Event Broker</tags>
+        <dependencies>
+            <dependency id="Unity" version="3.5.1404.0" />
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="EventBrokerExtension\bin\Release\EventBrokerExtension.dll" target="lib\net45\EventBrokerExtension.dll" />
+        <file src="SimpleEventBroker\bin\Release\SimpleEventBroker.dll" target="lib\net45\SimpleEventBroker.dll" />
+    </files>
+</package>
