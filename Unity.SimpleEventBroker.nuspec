@@ -5,6 +5,7 @@
         <version>1.0.0.3</version>
         <title>Unity SimpleEventBroker</title>
         <authors>Sander Struijk</authors>
+        <projectUrl>https://github.com/furier/Unity.SimpleEventBroker</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>My package description.</description>
         <copyright>Microsoft</copyright>
