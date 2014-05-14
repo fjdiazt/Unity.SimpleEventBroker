@@ -22,7 +22,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventBrokerExtension", "net
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleEventBroker", "netcore451\SimpleEventBroker\SimpleEventBroker.csproj", "{7952EC1D-A4FE-49F9-9115-086666A1DC79}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{FEB5DA4D-434B-4D37-979A-212A5473C2C9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "netcore451\Common\Common.csproj", "{FEB5DA4D-434B-4D37-979A-212A5473C2C9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

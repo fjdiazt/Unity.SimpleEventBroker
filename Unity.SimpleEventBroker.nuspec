@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
     <metadata>
         <id>Unity.SimpleEventBroker</id>
-        <version>0.0.0.2</version>
+        <version>1.0.0.3</version>
         <title>Unity SimpleEventBroker</title>
         <authors>Sander Struijk</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -13,7 +13,7 @@
             <group>
                 <dependency id="Unity" version="3.5.1404.0" />
             </group>
-            <group targetFramework=".NETFramework4.5.1">
+            <group targetFramework=".NETCore4.5.1">
                 <dependency id="Catel.Core" version="3.9.0" />
             </group>
         </dependencies>
@@ -21,7 +21,8 @@
     <files>
         <file src="net45\EventBrokerExtension\bin\Release\EventBrokerExtension.dll" target="lib\net45\EventBrokerExtension.dll" />
         <file src="net45\EventBrokerExtension\bin\Release\SimpleEventBroker.dll" target="lib\net45\SimpleEventBroker.dll" />
-        <file src="netcore451\EventBrokerExtension\bin\Release\EventBrokerExtension.dll" target="lib\net451\EventBrokerExtension.dll" />
-        <file src="netcore451\EventBrokerExtension\bin\Release\SimpleEventBroker.dll" target="lib\net451\SimpleEventBroker.dll" />
+        <file src="netcore451\EventBrokerExtension\bin\Release\Common.dll" target="lib\netcore451\Common.dll" />
+        <file src="netcore451\EventBrokerExtension\bin\Release\EventBrokerExtension.dll" target="lib\netcore451\EventBrokerExtension.dll" />
+        <file src="netcore451\EventBrokerExtension\bin\Release\SimpleEventBroker.dll" target="lib\netcore451\SimpleEventBroker.dll" />
     </files>
 </package>
