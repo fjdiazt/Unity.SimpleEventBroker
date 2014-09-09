@@ -109,7 +109,12 @@ namespace SimpleEventBroker
         {
             foreach(var subscriber in GetEvent(publishedEvent).Subscribers)
             {
-                yield return subscriber;
+                EventHandler eventHandler;
+                subscriber.TryGetTarget(out eventHandler);
+                if (eventHandler != null)
+                {
+                    yield return eventHandler;
+                }
             }
         }
 
