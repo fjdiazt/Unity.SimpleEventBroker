@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 #endregion
@@ -27,14 +28,14 @@ namespace SimpleEventBroker
         private readonly List<object> publishers;
 
         /// <summary>   The subscribers. </summary>
-        private readonly List<EventHandler> subscribers;
+        private readonly List<WeakReference<EventHandler>> subscribers;
 
         /// <summary>   Default constructor. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         public PublishedEvent()
         {
             publishers = new List<object>();
-            subscribers = new List<EventHandler>();
+            subscribers = new List<WeakReference<EventHandler>>();
         }
 
         /// <summary>   Gets the publishers. </summary>
@@ -52,7 +53,7 @@ namespace SimpleEventBroker
 
         /// <summary>   Gets the subscribers. </summary>
         /// <value> The subscribers. </value>
-        public IEnumerable<EventHandler> Subscribers
+        public IEnumerable<WeakReference<EventHandler>> Subscribers
         {
             get
             {
@@ -122,7 +123,7 @@ namespace SimpleEventBroker
         /// <param name="subscriber">   The subscriber. </param>
         public void AddSubscriber(EventHandler subscriber)
         {
-            subscribers.Add(subscriber);
+            subscribers.Add(new WeakReference<EventHandler>(subscriber));
         }
 
         /// <summary>   Removes the subscriber described by subscriber. </summary>
@@ -130,7 +131,14 @@ namespace SimpleEventBroker
         /// <param name="subscriber">   The subscriber. </param>
         public void RemoveSubscriber(EventHandler subscriber)
         {
-            subscribers.Remove(subscriber);
+            var removeSubscribers = subscribers.Where(weakEventHandler =>
+                {
+                    EventHandler eventHandler;
+                    weakEventHandler.TryGetTarget(out eventHandler);
+                    return (eventHandler == null || eventHandler.Equals(subscriber));
+                });
+
+            subscribers.RemoveAll(removeSubscribers.Contains);
         }
 
         /// <summary>   Raises the publisher firing event. </summary>
@@ -141,7 +149,12 @@ namespace SimpleEventBroker
         {
             foreach(var subscriber in subscribers)
             {
-                subscriber(sender, e);
+                EventHandler eventHandler;
+                subscriber.TryGetTarget(out eventHandler);
+                if (eventHandler != null)
+                {
+                    eventHandler(sender, e);
+                }
             }
         }
 
