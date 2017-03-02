@@ -3,7 +3,7 @@
 // ***********************************************************************
 // Author	: Sander Struijk
 // File		: SimpleEventBrokerExtension.cs
-// Created	: 2014 05 14 12:53
+// Created	: 2014 05 14 13:09
 // Updated	: 2014 05 14 13:21
 // ***********************************************************************
 
@@ -21,8 +21,25 @@ namespace EventBrokerExtension
 {
     /// <summary>   A simple event broker extension. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-    public class SimpleEventBrokerExtension : UnityContainerExtension, ISimpleEventBrokerConfiguration
+    public class SimpleEventBrokerExtension : SimpleEventBrokerExtension<ExternallyControlledLifetimeManager>
     {
+    }
+
+    /// <summary>   A simple event broker extension. </summary>
+    /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
+    public class SimpleEventBrokerExtension<TLifetimeManager> : UnityContainerExtension, ISimpleEventBrokerConfiguration
+        where TLifetimeManager : LifetimeManager, new()
+    {
+        /// <summary>   Initial the container with this extension's functionality. </summary>
+        /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
+        protected override void Initialize()
+        {
+            Context.Container.RegisterInstance( broker, new TLifetimeManager() );
+
+            Context.Strategies.AddNew<EventBrokerReflectionStrategy>( UnityBuildStage.PreCreation );
+            Context.Strategies.AddNew<EventBrokerWireupStrategy>( UnityBuildStage.Initialization );
+        }
+
         /// <summary>   The broker. </summary>
         private readonly EventBroker broker = new EventBroker();
 
@@ -31,16 +48,6 @@ namespace EventBrokerExtension
         public EventBroker Broker
         {
             get { return broker; }
-        }
-
-        /// <summary>   Initializes this EventBrokerExtension.SimpleEventBrokerExtension. </summary>
-        /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-        protected override void Initialize()
-        {
-            Context.Container.RegisterInstance(broker, new ExternallyControlledLifetimeManager());
-
-            Context.Strategies.AddNew<EventBrokerReflectionStrategy>(UnityBuildStage.PreCreation);
-            Context.Strategies.AddNew<EventBrokerWireupStrategy>(UnityBuildStage.Initialization);
         }
     }
 }

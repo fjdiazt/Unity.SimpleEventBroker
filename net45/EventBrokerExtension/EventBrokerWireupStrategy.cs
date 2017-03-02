@@ -71,9 +71,11 @@ namespace EventBrokerExtension
             }
         }
 
-        private Type GetEventArGetArgsType(Type existing, string eventName)
+        private Type GetEventArGetArgsType(Type objectType, string eventName)
         {
-            var @event = existing.GetEvent(eventName);
+            var @event = objectType.GetEvent(eventName);
+            if(@event == null)
+                throw new Exception($"The type '{objectType}' does not have the event '{eventName}'");
 
             return @event.EventHandlerType.GenericTypeArguments[0]
                            ?? typeof( EventArgs );
