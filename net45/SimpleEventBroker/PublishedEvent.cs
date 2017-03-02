@@ -27,14 +27,14 @@ namespace SimpleEventBroker
         private readonly List<object> publishers;
 
         /// <summary>   The subscribers. </summary>
-        private readonly List<EventHandler> subscribers;
+        private readonly List<object> subscribers;
 
         /// <summary>   Default constructor. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         public PublishedEvent()
         {
             publishers = new List<object>();
-            subscribers = new List<EventHandler>();
+            subscribers = new List<object>();
         }
 
         /// <summary>   Gets the publishers. </summary>
@@ -43,7 +43,7 @@ namespace SimpleEventBroker
         {
             get
             {
-                foreach(var publisher in publishers)
+                foreach ( var publisher in publishers )
                 {
                     yield return publisher;
                 }
@@ -52,11 +52,11 @@ namespace SimpleEventBroker
 
         /// <summary>   Gets the subscribers. </summary>
         /// <value> The subscribers. </value>
-        public IEnumerable<EventHandler> Subscribers
+        public IEnumerable<object> Subscribers
         {
             get
             {
-                foreach(var subscriber in subscribers)
+                foreach ( var subscriber in subscribers )
                 {
                     yield return subscriber;
                 }
@@ -87,61 +87,67 @@ namespace SimpleEventBroker
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="publisher">    The publisher. </param>
         /// <param name="eventName">    Name of the event. </param>
-        public void AddPublisher(object publisher, string eventName)
+        public void AddPublisher<T>( object publisher, string eventName )
+            where T : EventArgs
         {
-            publishers.Add(publisher);
-            var targetEvent = publisher.GetType().GetEvent(eventName);
-            GuardEventExists(eventName, publisher, targetEvent);
+            publishers.Add( publisher );
+            var targetEvent = publisher.GetType().GetEvent( eventName );
+            GuardEventExists( eventName, publisher, targetEvent );
 
             var addEventMethod = targetEvent.GetAddMethod();
-            GuardAddMethodExists(targetEvent);
+            GuardAddMethodExists( targetEvent );
 
-            EventHandler newSubscriber = OnPublisherFiring;
-            addEventMethod.Invoke(publisher, new object[] {newSubscriber});
+            EventHandler<T> newSubscriber = OnPublisherFiring;
+            addEventMethod.Invoke( publisher, new object[] { newSubscriber } );
         }
 
         /// <summary>   Removes the publisher. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="publisher">    The publisher. </param>
         /// <param name="eventName">    Name of the event. </param>
-        public void RemovePublisher(object publisher, string eventName)
+        public void RemovePublisher<T>( object publisher, string eventName )
+            where T : EventArgs
         {
-            publishers.Remove(publisher);
-            var targetEvent = publisher.GetType().GetEvent(eventName);
-            GuardEventExists(eventName, publisher, targetEvent);
+            publishers.Remove( publisher );
+            var targetEvent = publisher.GetType().GetEvent( eventName );
+            GuardEventExists( eventName, publisher, targetEvent );
 
             var removeEventMethod = targetEvent.GetRemoveMethod();
-            GuardRemoveMethodExists(targetEvent);
+            GuardRemoveMethodExists( targetEvent );
 
-            EventHandler subscriber = OnPublisherFiring;
-            removeEventMethod.Invoke(publisher, new object[] {subscriber});
+            EventHandler<T> subscriber = OnPublisherFiring;
+            removeEventMethod.Invoke( publisher, new object[] { subscriber } );
         }
 
         /// <summary>   Adds a subscriber. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="subscriber">   The subscriber. </param>
-        public void AddSubscriber(EventHandler subscriber)
+        public void AddSubscriber<T>( EventHandler<T> subscriber )
+            where T : EventArgs
         {
-            subscribers.Add(subscriber);
+            subscribers.Add( subscriber );
         }
 
         /// <summary>   Removes the subscriber described by subscriber. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="subscriber">   The subscriber. </param>
-        public void RemoveSubscriber(EventHandler subscriber)
+        public void RemoveSubscriber<T>( EventHandler<T> subscriber )
+            where T : EventArgs
         {
-            subscribers.Remove(subscriber);
+            subscribers.Remove( subscriber );
         }
 
         /// <summary>   Raises the publisher firing event. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="sender">   Source of the event. </param>
         /// <param name="e">        Event information to send to registered event handlers. </param>
-        private void OnPublisherFiring(object sender, EventArgs e)
+        private void OnPublisherFiring<T>( object sender, T e )
+            where T : EventArgs
         {
-            foreach(var subscriber in subscribers)
+            foreach ( var subscriber in subscribers )
             {
-                subscriber(sender, e);
+                var sub = (EventHandler<T>)subscriber;
+                sub(sender, e);
             }
         }
 
@@ -154,12 +160,12 @@ namespace SimpleEventBroker
         /// <param name="eventName">    Name of the event. </param>
         /// <param name="publisher">    The publisher. </param>
         /// <param name="targetEvent">  Target event. </param>
-        private static void GuardEventExists(string eventName, object publisher, EventInfo targetEvent)
+        private static void GuardEventExists( string eventName, object publisher, EventInfo targetEvent )
         {
-            if(targetEvent == null)
-                throw new ArgumentException(string.Format("The event '{0}' is not implemented on type '{1}'",
+            if ( targetEvent == null )
+                throw new ArgumentException( string.Format( "The event '{0}' is not implemented on type '{1}'",
                         eventName,
-                        publisher.GetType().Name));
+                        publisher.GetType().Name ) );
         }
 
         /// <summary>   Queries if a given guard add method exists. </summary>
@@ -169,11 +175,11 @@ namespace SimpleEventBroker
         ///     illegal values.
         /// </exception>
         /// <param name="targetEvent">  Target event. </param>
-        private static void GuardAddMethodExists(EventInfo targetEvent)
+        private static void GuardAddMethodExists( EventInfo targetEvent )
         {
-            if(targetEvent.GetAddMethod() == null)
-                throw new ArgumentException(string.Format("The event '{0}' does not have a public Add method",
-                        targetEvent.Name));
+            if ( targetEvent.GetAddMethod() == null )
+                throw new ArgumentException( string.Format( "The event '{0}' does not have a public Add method",
+                        targetEvent.Name ) );
         }
 
         /// <summary>   Queries if a given guard remove method exists. </summary>
@@ -183,11 +189,11 @@ namespace SimpleEventBroker
         ///     illegal values.
         /// </exception>
         /// <param name="targetEvent">  Target event. </param>
-        private static void GuardRemoveMethodExists(EventInfo targetEvent)
+        private static void GuardRemoveMethodExists( EventInfo targetEvent )
         {
-            if(targetEvent.GetRemoveMethod() == null)
-                throw new ArgumentException(string.Format("The event '{0}' does not have a public Remove method",
-                        targetEvent.Name));
+            if ( targetEvent.GetRemoveMethod() == null )
+                throw new ArgumentException( string.Format( "The event '{0}' does not have a public Remove method",
+                        targetEvent.Name ) );
         }
     }
 }

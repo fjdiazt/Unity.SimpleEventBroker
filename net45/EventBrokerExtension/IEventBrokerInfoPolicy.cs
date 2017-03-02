@@ -11,6 +11,7 @@
 
 #region Using statements
 
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Practices.ObjectBuilder2;
@@ -66,6 +67,8 @@ namespace EventBrokerExtension
         /// <summary>   The subscriber. </summary>
         public MethodInfo Subscriber;
 
+        public Type EventArgsType { get; }
+
         /// <summary>   Constructor. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="publishedEventName">   Name of the published event. </param>
@@ -74,6 +77,17 @@ namespace EventBrokerExtension
         {
             PublishedEventName = publishedEventName;
             Subscriber = subscriber;
+
+            try
+            {
+                EventArgsType = subscriber.GetParameters()[ 1 ].ParameterType;
+                if (EventArgsType.BaseType != typeof(EventArgs))
+                    throw new Exception();
+            }
+            catch (Exception)
+            {
+                throw new Exception("Subscriber method must have an EventArgs parameter as the second argument");
+            }
         }
     }
 }
