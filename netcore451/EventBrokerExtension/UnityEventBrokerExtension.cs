@@ -19,13 +19,13 @@ using SimpleEventBroker;
 
 namespace EventBrokerExtension
 {
-    public class SimpleEventBrokerExtension: SimpleEventBrokerExtension<ExternallyControlledLifetimeManager>
+    public class UnityEventBrokerExtension: UnityEventBrokerExtension<ExternallyControlledLifetimeManager>
     {
     }
 
     /// <summary>   A simple event broker extension. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-    public class SimpleEventBrokerExtension<TLifetimeManager> : UnityContainerExtension, ISimpleEventBrokerConfiguration
+    public class UnityEventBrokerExtension<TLifetimeManager> : UnityContainerExtension, ISimpleEventBrokerConfiguration
         where TLifetimeManager : LifetimeManager, new()
     {
         /// <summary>   Initial the container with this extension's functionality. </summary>

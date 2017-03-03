@@ -15,11 +15,11 @@ using System;
 
 #endregion
 
-namespace SimpleEventBroker
+namespace EventBrokerExtension
 {
     /// <summary>   Attribute for publishes. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-    [AttributeUsage(AttributeTargets.Event, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Event, AllowMultiple = true, Inherited = true )]
     public class PublishesAttribute : PublishSubscribeAttribute
     {
         /// <summary>   Constructor. </summary>

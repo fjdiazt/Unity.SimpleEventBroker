@@ -144,6 +144,7 @@ namespace SimpleEventBroker
         private void OnPublisherFiring<T>( object sender, T e )
             where T : EventArgs
         {
+
             foreach ( var subscriber in subscribers )
             {
                 var sub = (EventHandler<T>)subscriber;

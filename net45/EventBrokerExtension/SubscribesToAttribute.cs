@@ -12,16 +12,26 @@
 #region Using statements
 
 using System;
+using SimpleEventBroker;
 
 #endregion
 
-namespace SimpleEventBroker
+namespace EventBrokerExtension
 {
     /// <summary>   Attribute for subscribes to. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
     public class SubscribesToAttribute : PublishSubscribeAttribute
     {
+        /// <summary>
+        /// Gets or sets a value indicating whether to wake up to an event 
+        /// even if there are no existsing instances of this subscriber.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [wake up]; otherwise, <c>false</c>.
+        /// </value>
+        public bool WakeUp { get; set; }
+
         /// <summary>   Constructor. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="eventName">    Name of the event. </param>

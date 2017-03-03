@@ -111,7 +111,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PublishesAttribute.cs" />
     <Compile Include="PublishSubscribeAttribute.cs" />
-    <Compile Include="SimpleEventBrokerExtension.cs" />
+    <Compile Include="UnityEventBrokerExtension.cs" />
     <Compile Include="SubscribesToAttribute.cs" />
   </ItemGroup>
   <ItemGroup>

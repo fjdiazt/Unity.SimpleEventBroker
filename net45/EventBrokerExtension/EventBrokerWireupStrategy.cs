@@ -62,9 +62,19 @@ namespace EventBrokerExtension
 
             foreach ( var sub in policy.Subscriptions )
             {
-                var @delegate = Delegate.CreateDelegate
-                    (typeof(EventHandler<>).MakeGenericType(sub.EventArgsType),
-                     context.Existing, sub.Subscriber);
+                var instance = context.Existing;
+
+                // Handle subscribers with no instances registered
+                if ( context.Existing.GetType() != sub.Subscriber.DeclaringType)
+                {
+                    if(sub.Subscriber.DeclaringType == null)
+                        throw new Exception($"Unable to get declaring type for event {sub.Subscriber.Name}");
+
+                    instance = Activator.CreateInstance(sub.Subscriber.DeclaringType);
+                }
+
+                var @delegate = Delegate.CreateDelegate(typeof(EventHandler<>).MakeGenericType(sub.EventArgsType),
+                                                        instance, sub.Subscriber);
 
                 registerSubscriber.MakeGenericMethod(sub.EventArgsType)
                                   .Invoke(broker, new object[] {sub.PublishedEventName, @delegate});
