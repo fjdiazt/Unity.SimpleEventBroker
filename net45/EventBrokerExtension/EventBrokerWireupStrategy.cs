@@ -70,7 +70,14 @@ namespace EventBrokerExtension
                     if(sub.Subscriber.DeclaringType == null)
                         throw new Exception($"Unable to get declaring type for event {sub.Subscriber.Name}");
 
-                    instance = Activator.CreateInstance(sub.Subscriber.DeclaringType);
+                    try
+                    {
+                        instance = Activator.CreateInstance(sub.Subscriber.DeclaringType);
+                    }
+                    catch ( MissingMethodException ex )
+                    {
+                        throw new Exception($"Subscribers with 'Wakeup=true' must have a parameterless  constructor. The subscriber '{sub.Subscriber.DeclaringType.Name}' does not define a parameterless constructor.", ex );
+                    }
                 }
 
                 var @delegate = Delegate.CreateDelegate(typeof(EventHandler<>).MakeGenericType(sub.EventArgsType),
