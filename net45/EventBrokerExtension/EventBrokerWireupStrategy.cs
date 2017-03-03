@@ -23,13 +23,16 @@ namespace EventBrokerExtension
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     public class EventBrokerWireupStrategy : BuilderStrategy
     {
+        private bool IsBuildingUp { get; set; }
+
         /// <summary>   Pre build up. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="context">  The context. </param>
         public override void PreBuildUp(IBuilderContext context)
         {
-            if(context.Existing != null)
+            if(context.Existing != null && IsBuildingUp == false )
             {
+                IsBuildingUp = true;
                 var policy = context.Policies.Get<IEventBrokerInfoPolicy>(context.BuildKey);
                 if(policy != null)
                 {
@@ -39,6 +42,7 @@ namespace EventBrokerExtension
 
                     BuildSubscriptions(context, broker, policy);
                 }
+                IsBuildingUp = false;
             }
         }
 
@@ -65,26 +69,37 @@ namespace EventBrokerExtension
                 var instance = context.Existing;
 
                 // Handle subscribers with no instances registered
-                if ( context.Existing.GetType() != sub.Subscriber.DeclaringType)
+                if (context.Existing.GetType() != sub.Subscriber.DeclaringType)
                 {
-                    if(sub.Subscriber.DeclaringType == null)
+                    if (sub.Subscriber.DeclaringType == null)
                         throw new Exception($"Unable to get declaring type for event {sub.Subscriber.Name}");
 
-                    try
+                    // For types with no parameterless constructors, save for later when
+                    // it awakes
+                    if (sub.Subscriber.DeclaringType.GetConstructor(Type.EmptyTypes) == null)
+                    {
+                        broker.RegisterWakeupSubscriber(sub.Subscriber.DeclaringType, sub);
+                    }
+                    // For types with parameterless constructor, create an instance right away
+                    else
                     {
                         instance = Activator.CreateInstance(sub.Subscriber.DeclaringType);
-                    }
-                    catch ( MissingMethodException ex )
-                    {
-                        throw new Exception($"Subscribers with 'Wakeup=true' must have a parameterless  constructor. The subscriber '{sub.Subscriber.DeclaringType.Name}' does not define a parameterless constructor.", ex );
+
+                        var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( sub.EventArgsType ), instance, sub.Subscriber );
+
+                        // Broker.RegisterSubscriber<T>(publishedEventName, delegate)
+                        registerSubscriber.MakeGenericMethod( sub.EventArgsType )
+                                 .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
                     }
                 }
+                else
+                {
+                    var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( sub.EventArgsType ),
+                                                        instance, sub.Subscriber );
 
-                var @delegate = Delegate.CreateDelegate(typeof(EventHandler<>).MakeGenericType(sub.EventArgsType),
-                                                        instance, sub.Subscriber);
-
-                registerSubscriber.MakeGenericMethod(sub.EventArgsType)
-                                  .Invoke(broker, new object[] {sub.PublishedEventName, @delegate});
+                    registerSubscriber.MakeGenericMethod( sub.EventArgsType )
+                                      .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
+                }
             }
         }
 

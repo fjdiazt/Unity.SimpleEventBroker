@@ -14,6 +14,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using EventBrokerExtension;
 using Microsoft.Practices.Unity;
 
 #endregion
@@ -25,6 +26,7 @@ namespace SimpleEventBroker
     public class PublishedEvent
     {
         private IUnityContainer Container { get; }
+        private EventBroker Broker { get; }
 
         /// <summary>   The publishers. </summary>
         private readonly List<dynamic> publishers;
@@ -33,16 +35,17 @@ namespace SimpleEventBroker
         private readonly List<dynamic> subscribers;
         
         /// <summary>   The subscribers. </summary>
-        private readonly List<dynamic> wakeupSubscribers;
+        private readonly List<Tuple<Type, SubscriptionInfo>> wakeupSubscribers;
 
         /// <summary>   Default constructor. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-        public PublishedEvent(IUnityContainer container)
+        public PublishedEvent(IUnityContainer container, EventBroker broker)
         {
             Container = container;
+            Broker = broker;
             publishers = new List<dynamic>();
             subscribers = new List<dynamic>();
-            wakeupSubscribers = new List<Tuple<Type, Subscrip>>();
+            wakeupSubscribers = new List<Tuple<Type, SubscriptionInfo>>();
         }
 
         /// <summary>   Gets the publishers. </summary>
@@ -147,6 +150,11 @@ namespace SimpleEventBroker
             subscribers.Add( subscriber );
         }
 
+        internal void AddSubscriber( Type declaringType, SubscriptionInfo sub )
+        {
+            wakeupSubscribers.Add(new Tuple<Type, SubscriptionInfo>(declaringType, sub));
+        }
+
         /// <summary>   Removes the subscriber described by subscriber. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="subscriber">   The subscriber. </param>
@@ -166,11 +174,16 @@ namespace SimpleEventBroker
 
             foreach ( var subscriber in wakeupSubscribers )
             {
-                var instance = Container.Resolve( (Type)subscriber.Target.GetType() );
-                //var method = instance.GetType().GetMethod( sub.Method.Name );
+                var instance = Container.Resolve( subscriber.Item1 );
+                var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( subscriber.Item2.EventArgsType ),instance, subscriber.Item2.Subscriber );
 
-                //var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( subscriber.EventArgsType ),
-                //                                            instance, sub.Subscriber );
+                var registerSubscriber = Broker.GetType().GetMethod( nameof( Broker.RegisterSubscriber ) );
+
+                // This will call another roundup of the builder and end up adding a new subscriber automatically
+                // Broker.RegisterSubscriber<T>(publishedEventName, delegate)
+                registerSubscriber.MakeGenericMethod( subscriber.Item2.EventArgsType )
+                                  .Invoke( Broker, new object[] { subscriber.Item2.PublishedEventName, @delegate } );
+
             }
 
             foreach ( var subscriber in subscribers )

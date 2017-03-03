@@ -21,33 +21,29 @@ namespace EventBrokerExtension
 {
     /// <summary>   A simple event broker extension. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-    public class SimpleEventBrokerExtension : SimpleEventBrokerExtension<ExternallyControlledLifetimeManager>
+    public class UnityEventBrokerExtension : UnityEventBrokerExtension<ExternallyControlledLifetimeManager>
     {
     }
 
     /// <summary>   A simple event broker extension. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-    public class SimpleEventBrokerExtension<TLifetimeManager> : UnityContainerExtension, ISimpleEventBrokerConfiguration
+    public class UnityEventBrokerExtension<TLifetimeManager> : UnityContainerExtension, ISimpleEventBrokerConfiguration
         where TLifetimeManager : LifetimeManager, new()
     {
+        /// <summary>   Gets the broker. </summary>
+        /// <value> The broker. </value>
+        public EventBroker Broker { get; private set; }
+
         /// <summary>   Initial the container with this extension's functionality. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         protected override void Initialize()
         {
-            Context.Container.RegisterInstance( broker, new TLifetimeManager() );
+            Broker = new EventBroker( Context.Container );
+
+            Context.Container.RegisterInstance( Broker, new TLifetimeManager() );
 
             Context.Strategies.AddNew<EventBrokerReflectionStrategy>( UnityBuildStage.PreCreation );
             Context.Strategies.AddNew<EventBrokerWireupStrategy>( UnityBuildStage.Initialization );
-        }
-
-        /// <summary>   The broker. </summary>
-        private readonly EventBroker broker = new EventBroker();
-
-        /// <summary>   Gets the broker. </summary>
-        /// <value> The broker. </value>
-        public EventBroker Broker
-        {
-            get { return broker; }
         }
     }
 }

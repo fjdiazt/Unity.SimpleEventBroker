@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using EventBrokerExtension;
 using Microsoft.Practices.Unity;
 
 #endregion
@@ -82,6 +83,12 @@ namespace SimpleEventBroker
             publishedEvent.AddSubscriber(subscriber);
         }
 
+        public void RegisterWakeupSubscriber(Type declaringType, SubscriptionInfo sub)
+        {
+            var publishedEvent = GetEvent(sub.PublishedEventName);
+            publishedEvent.AddSubscriber(declaringType, sub);
+        }
+
         /// <summary>   Unregisters the subscriber. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="publishedEventName">   Name of the published event. </param>
@@ -130,7 +137,7 @@ namespace SimpleEventBroker
         private PublishedEvent GetEvent(string eventName)
         {
             if(!eventPublishers.ContainsKey(eventName))
-                eventPublishers[eventName] = new PublishedEvent(Container);
+                eventPublishers[eventName] = new PublishedEvent(Container, this);
             return eventPublishers[eventName];
         }
 
