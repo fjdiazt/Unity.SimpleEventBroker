@@ -13,8 +13,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using EventBrokerExtension;
+using EventBrokerExtension.EventBroker;
 using Microsoft.Practices.Unity;
 
 #endregion
@@ -25,7 +27,22 @@ namespace SimpleEventBroker
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     public class PublishedEvent
     {
-        private IUnityContainer Container { get; }
+        public static class ContainerProvider
+        {
+            private static IUnityContainer _container;
+
+            public static IUnityContainer EventBrokerContainer
+            {
+                get
+                {
+                    return _container ?? Container;
+                }
+                set { _container = value; }
+            }
+        }
+
+        private static IUnityContainer Container { get; set; }
+
         private EventBroker Broker { get; }
 
         /// <summary>   The publishers. </summary>
@@ -74,7 +91,7 @@ namespace SimpleEventBroker
             }
         }
 
-        public IEnumerable<object> WakeupSubscribers
+        public IEnumerable<dynamic> WakeupSubscribers
         {
             get
             {
@@ -141,6 +158,17 @@ namespace SimpleEventBroker
             removeEventMethod.Invoke( publisher, new object[] { subscriber } );
         }
 
+        public void RemoveUnTypedPublisher( object publisher, string eventName )
+        {
+            var targetEvent = publisher.GetType().GetEvents()
+                .FirstOrDefault(e=>e.IsDefined(typeof(PublishesAttribute)));
+            GuardEventExists(eventName, publisher, targetEvent);
+
+            var removePublisher = GetType().GetMethod( nameof( RemovePublisher ) );
+            removePublisher.MakeGenericMethod(targetEvent.EventHandlerType.GenericTypeArguments[0])
+                           .Invoke(this, new[] {publisher, targetEvent.Name});
+        }
+
         /// <summary>   Adds a subscriber. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="subscriber">   The subscriber. </param>
@@ -150,9 +178,9 @@ namespace SimpleEventBroker
             subscribers.Add( subscriber );
         }
 
-        internal void AddSubscriber( Type declaringType, SubscriptionInfo sub )
+        internal void AddWakeupSubscriber( Type declaringType, SubscriptionInfo sub )
         {
-            wakeupSubscribers.Add(new Tuple<Type, SubscriptionInfo>(declaringType, sub));
+            wakeupSubscribers.Add( new Tuple<Type, SubscriptionInfo>( declaringType, sub ) );
         }
 
         /// <summary>   Removes the subscriber described by subscriber. </summary>
@@ -164,6 +192,11 @@ namespace SimpleEventBroker
             subscribers.Remove( subscriber );
         }
 
+        public void RemoveSubscriber( dynamic subscriber )
+        {
+            subscribers.Remove( subscriber );
+        }
+
         /// <summary>   Raises the publisher firing event. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="sender">   Source of the event. </param>
@@ -171,26 +204,17 @@ namespace SimpleEventBroker
         private void OnPublisherFiring<T>( object sender, T e )
             where T : EventArgs
         {
-
             foreach ( var subscriber in wakeupSubscribers )
             {
-                var instance = Container.Resolve( subscriber.Item1 );
-                var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( subscriber.Item2.EventArgsType ),instance, subscriber.Item2.Subscriber );
-
-                var registerSubscriber = Broker.GetType().GetMethod( nameof( Broker.RegisterSubscriber ) );
-
                 // This will call another roundup of the builder and end up adding a new subscriber automatically
-                // Broker.RegisterSubscriber<T>(publishedEventName, delegate)
-                registerSubscriber.MakeGenericMethod( subscriber.Item2.EventArgsType )
-                                  .Invoke( Broker, new object[] { subscriber.Item2.PublishedEventName, @delegate } );
-
+                ContainerProvider.EventBrokerContainer.Resolve( subscriber.Item1 );
             }
 
             foreach ( var subscriber in subscribers )
             {
                 var sub = (EventHandler<T>)subscriber;
                 sub( sender, e );
-            }
+            }            
         }
 
         /// <summary>   Queries if a given guard event exists. </summary>

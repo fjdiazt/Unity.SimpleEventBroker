@@ -12,7 +12,6 @@
 #region Using statements
 
 using System;
-using SimpleEventBroker;
 
 #endregion
 
@@ -20,7 +19,7 @@ namespace EventBrokerExtension
 {
     /// <summary>   Attribute for subscribes to. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
     public class SubscribesToAttribute : PublishSubscribeAttribute
     {
         /// <summary>

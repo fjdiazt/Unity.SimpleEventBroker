@@ -42,7 +42,6 @@ namespace SimpleEventBroker
             Container = container;
             publishers = new List<dynamic>();
             subscribers = new List<dynamic>();
-            wakeupSubscribers = new List<Tuple<Type, Subscrip>>();
         }
 
         /// <summary>   Gets the publishers. </summary>

@@ -12,7 +12,6 @@
 #region Using statements
 
 using Microsoft.Practices.Unity;
-using SimpleEventBroker;
 
 #endregion
 
@@ -24,6 +23,6 @@ namespace EventBrokerExtension
     {
         /// <summary>   Gets the broker. </summary>
         /// <value> The broker. </value>
-        EventBroker Broker { get; }
+        EventBroker.EventBroker Broker { get; }
     }
 }

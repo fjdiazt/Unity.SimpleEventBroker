@@ -28,7 +28,7 @@ namespace SimpleEventBroker
         /// <summary>   The event publishers. </summary>
         private readonly Dictionary<string, PublishedEvent> eventPublishers = new Dictionary<string, PublishedEvent>();
 
-        public EventBroker(IUnityContainer container)
+        public EventBroker( IUnityContainer container )
         {
             Container = container;
         }
@@ -39,7 +39,7 @@ namespace SimpleEventBroker
         {
             get
             {
-                foreach(var eventName in eventPublishers.Keys)
+                foreach ( var eventName in eventPublishers.Keys )
                 {
                     yield return eventName;
                 }
@@ -51,11 +51,11 @@ namespace SimpleEventBroker
         /// <param name="publishedEventName">   Name of the published event. </param>
         /// <param name="publisher">            The publisher. </param>
         /// <param name="eventName">            Name of the event. </param>
-        public void RegisterPublisher<T>(string publishedEventName, object publisher, string eventName)
+        public void RegisterPublisher<T>( string publishedEventName, object publisher, string eventName )
             where T : EventArgs
         {
-            var @event = GetEvent(publishedEventName);
-            @event.AddPublisher<T>(publisher, eventName);
+            var @event = GetEvent( publishedEventName );
+            @event.AddPublisher<T>( publisher, eventName );
         }
 
         /// <summary>   Unregisters the publisher. </summary>
@@ -63,11 +63,11 @@ namespace SimpleEventBroker
         /// <param name="publishedEventName">   Name of the published event. </param>
         /// <param name="publisher">            The publisher. </param>
         /// <param name="eventName">            Name of the event. </param>
-        public void UnregisterPublisher<T>(string publishedEventName, object publisher, string eventName)
+        public void UnregisterPublisher<T>( string publishedEventName, object publisher, string eventName )
             where T : EventArgs
         {
-            var @event = GetEvent(publishedEventName);
-            @event.RemovePublisher<T>(publisher, eventName);
+            var @event = GetEvent( publishedEventName );
+            @event.RemovePublisher<T>( publisher, eventName );
             RemoveDeadEvents();
         }
 
@@ -75,21 +75,27 @@ namespace SimpleEventBroker
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="publishedEventName">   Name of the published event. </param>
         /// <param name="subscriber">           The subscriber. </param>
-        public void RegisterSubscriber<T>(string publishedEventName, EventHandler<T> subscriber)
+        public void RegisterSubscriber<T>( string publishedEventName, EventHandler<T> subscriber )
             where T : EventArgs
         {
-            var publishedEvent = GetEvent(publishedEventName);
-            publishedEvent.AddSubscriber(subscriber);
+            var publishedEvent = GetEvent( publishedEventName );
+            publishedEvent.AddSubscriber( subscriber );
+        }
+
+        public void RegisterWakeupSubscriber( Type declaringType, SubscriptionInfo sub )
+        {
+            var publishedEvent = GetEvent( sub.PublishedEventName );
+            publishedEvent.AddSubscriber( declaringType, sub );
         }
 
         /// <summary>   Unregisters the subscriber. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="publishedEventName">   Name of the published event. </param>
         /// <param name="subscriber">           The subscriber. </param>
-        public void UnregisterSubscriber(string publishedEventName, EventHandler<EventArgs> subscriber)
+        public void UnregisterSubscriber( string publishedEventName, EventHandler<EventArgs> subscriber )
         {
-            var @event = GetEvent(publishedEventName);
-            @event.RemoveSubscriber(subscriber);
+            var @event = GetEvent( publishedEventName );
+            @event.RemoveSubscriber( subscriber );
             RemoveDeadEvents();
         }
 
@@ -100,9 +106,9 @@ namespace SimpleEventBroker
         ///     An enumerator that allows foreach to be used to process the publishers fors in
         ///     this collection.
         /// </returns>
-        public IEnumerable<object> GetPublishersFor(string publishedEvent)
+        public IEnumerable<object> GetPublishersFor( string publishedEvent )
         {
-            foreach(var publisher in GetEvent(publishedEvent).Publishers)
+            foreach ( var publisher in GetEvent( publishedEvent ).Publishers )
             {
                 yield return publisher;
             }
@@ -115,11 +121,11 @@ namespace SimpleEventBroker
         ///     An enumerator that allows foreach to be used to process the subscribers fors in
         ///     this collection.
         /// </returns>
-        public IEnumerable<EventHandler<EventArgs>> GetSubscribersFor(string publishedEvent)
+        public IEnumerable<EventHandler<EventArgs>> GetSubscribersFor( string publishedEvent )
         {
-            foreach(var subscriber in GetEvent(publishedEvent).Subscribers)
+            foreach ( var subscriber in GetEvent( publishedEvent ).Subscribers )
             {
-                yield return (EventHandler<EventArgs>) subscriber;
+                yield return (EventHandler<EventArgs>)subscriber;
             }
         }
 
@@ -127,11 +133,11 @@ namespace SimpleEventBroker
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="eventName">    Name of the event. </param>
         /// <returns>   The event. </returns>
-        private PublishedEvent GetEvent(string eventName)
+        private PublishedEvent GetEvent( string eventName )
         {
-            if(!eventPublishers.ContainsKey(eventName))
-                eventPublishers[eventName] = new PublishedEvent(Container);
-            return eventPublishers[eventName];
+            if ( !eventPublishers.ContainsKey( eventName ) )
+                eventPublishers[ eventName ] = new PublishedEvent( this );
+            return eventPublishers[ eventName ];
         }
 
         /// <summary>   Removes the dead events. </summary>
@@ -139,13 +145,13 @@ namespace SimpleEventBroker
         private void RemoveDeadEvents()
         {
             var deadEvents = new List<string>();
-            foreach(var publishedEvent in eventPublishers)
+            foreach ( var publishedEvent in eventPublishers )
             {
-                if(!publishedEvent.Value.HasPublishers && !publishedEvent.Value.HasSubscribers)
-                    deadEvents.Add(publishedEvent.Key);
+                if ( !publishedEvent.Value.HasPublishers && !publishedEvent.Value.HasSubscribers )
+                    deadEvents.Add( publishedEvent.Key );
             }
 
-            deadEvents.ForEach(delegate(string eventName) { eventPublishers.Remove(eventName); });
+            deadEvents.ForEach( delegate ( string eventName ) { eventPublishers.Remove( eventName ); } );
         }
     }
 }

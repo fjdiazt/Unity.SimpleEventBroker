@@ -27,14 +27,16 @@ namespace EventBrokerExtension
     {
         private static IEnumerable<MethodInfo> WakeupEventsCache { get; set; }
 
-        private bool WakeupEventsSubscribed { get; set; }
-
         /// <summary>   Pre build up. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="context">  The context. </param>
         public override void PreBuildUp(IBuilderContext context)
         {
-            if(context.Policies.Get<IEventBrokerInfoPolicy>(context.BuildKey) == null)
+            if ( context.BuildKey?.Type.IsDefined( typeof( PublisherAttribute ), false ) == false
+                 && context.BuildKey?.Type.IsDefined( typeof( SubscriberAttribute ), false ) == false )
+                return;
+
+            if (context.Policies.Get<IEventBrokerInfoPolicy>(context.BuildKey) == null)
             {
                 var policy = new EventBrokerInfoPolicy();
                 context.Policies.Set<IEventBrokerInfoPolicy>(policy, context.BuildKey);
@@ -42,11 +44,13 @@ namespace EventBrokerExtension
                 AddPublicationsToPolicy(context.BuildKey, policy);
                 AddSubscriptionsToPolicy(context.BuildKey, policy);
 
-                if (WakeupEventsSubscribed == false)
-                    AddWakeupSubscriptionsToPolicy( context.BuildKey, policy );
-
-                WakeupEventsSubscribed = true;
+                AddWakeupSubscriptionsToPolicy( context.BuildKey, policy );
             }
+        }
+
+        public override void PostBuildUp(IBuilderContext context)
+        {            
+            base.PostBuildUp(context);
         }
 
         // Handle subcribed types that are not yet instanced
@@ -97,10 +101,12 @@ namespace EventBrokerExtension
         private void AddWakeupSubscriptionsToPolicy(NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy)
         {
             var subscribedMethods = buildKey.Type.GetMethods().Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ).ToArray();
-            
-            foreach ( var method in GetWakeupSubscriberMethods( subscribedMethods ) )
+
+            var methods = GetWakeupSubscriberMethods(subscribedMethods);
+
+            foreach ( var method in  methods)
             {
-                var attrs = (SubscribesToAttribute[])method.GetCustomAttributes( typeof( SubscribesToAttribute ), true );
+                var attrs = (SubscribesToAttribute[])method.GetCustomAttributes( typeof( SubscribesToAttribute ), false );
 
                 foreach ( var attr in attrs )
                 {

@@ -13,7 +13,6 @@
 
 using System;
 using Microsoft.Practices.ObjectBuilder2;
-using SimpleEventBroker;
 
 #endregion
 
@@ -23,16 +22,22 @@ namespace EventBrokerExtension
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     public class EventBrokerWireupStrategy : BuilderStrategy
     {
-        private bool IsBuildingUp { get; set; }
+        private bool BuildingUp { get; set; }
 
         /// <summary>   Pre build up. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="context">  The context. </param>
         public override void PreBuildUp(IBuilderContext context)
         {
-            if(context.Existing != null && IsBuildingUp == false )
+            if(BuildingUp)
+                return;
+
+            if (context.BuildKey?.Type?.IsDefined( typeof( PublisherAttribute ) ,false) == false 
+                && context.BuildKey?.Type.IsDefined(typeof(SubscriberAttribute), false) == false)
+                return;
+
+            if(context.Existing != null )
             {
-                IsBuildingUp = true;
                 var policy = context.Policies.Get<IEventBrokerInfoPolicy>(context.BuildKey);
                 if(policy != null)
                 {
@@ -42,11 +47,16 @@ namespace EventBrokerExtension
 
                     BuildSubscriptions(context, broker, policy);
                 }
-                IsBuildingUp = false;
             }
         }
 
-        private void BuildPublications(IBuilderContext context, EventBroker broker, IEventBrokerInfoPolicy policy)
+        public override void PostBuildUp(IBuilderContext context)
+        {
+            BuildingUp = false;
+            base.PostBuildUp(context);
+        }
+
+        private void BuildPublications(IBuilderContext context, EventBroker.EventBroker broker, IEventBrokerInfoPolicy policy)
         {
             var registerPublisher = broker.GetType().GetMethod( nameof( broker.RegisterPublisher ) );
 
@@ -59,7 +69,7 @@ namespace EventBrokerExtension
             }
         }
 
-        private static void BuildSubscriptions(IBuilderContext context, EventBroker broker, 
+        private static void BuildSubscriptions(IBuilderContext context, EventBroker.EventBroker broker, 
                                                IEventBrokerInfoPolicy policy)
         {
             var registerSubscriber = broker.GetType().GetMethod(nameof(broker.RegisterSubscriber));
@@ -79,27 +89,19 @@ namespace EventBrokerExtension
                     if (sub.Subscriber.DeclaringType.GetConstructor(Type.EmptyTypes) == null)
                     {
                         broker.RegisterWakeupSubscriber(sub.Subscriber.DeclaringType, sub);
+                        continue;
                     }
+                    
                     // For types with parameterless constructor, create an instance right away
-                    else
-                    {
-                        instance = Activator.CreateInstance(sub.Subscriber.DeclaringType);
-
-                        var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( sub.EventArgsType ), instance, sub.Subscriber );
-
-                        // Broker.RegisterSubscriber<T>(publishedEventName, delegate)
-                        registerSubscriber.MakeGenericMethod( sub.EventArgsType )
-                                 .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
-                    }
+                    instance = Activator.CreateInstance(sub.Subscriber.DeclaringType);
                 }
-                else
-                {
-                    var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( sub.EventArgsType ),
-                                                        instance, sub.Subscriber );
 
-                    registerSubscriber.MakeGenericMethod( sub.EventArgsType )
-                                      .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
-                }
+                var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( sub.EventArgsType ),
+                                                    instance, sub.Subscriber );
+
+                // Broker.RegisterSubscriber<T>(publishedEventName, delegate)
+                registerSubscriber.MakeGenericMethod( sub.EventArgsType )
+                                    .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
             }
         }
 
@@ -121,9 +123,9 @@ namespace EventBrokerExtension
         /// </exception>
         /// <param name="context">  The context. </param>
         /// <returns>   The broker. </returns>
-        private EventBroker GetBroker(IBuilderContext context)
+        private EventBroker.EventBroker GetBroker(IBuilderContext context)
         {
-            var broker = context.NewBuildUp<EventBroker>();
+            var broker = context.NewBuildUp<EventBroker.EventBroker>();
             if(broker == null)
                 throw new InvalidOperationException("No event broker available");
             return broker;

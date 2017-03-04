@@ -13,12 +13,13 @@
 
 using System;
 using System.Collections.Generic;
-using EventBrokerExtension;
+using System.Linq;
 using Microsoft.Practices.Unity;
+using SimpleEventBroker;
 
 #endregion
 
-namespace SimpleEventBroker
+namespace EventBrokerExtension.EventBroker
 {
     /// <summary>   An event broker. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
@@ -56,7 +57,8 @@ namespace SimpleEventBroker
             where T : EventArgs
         {
             var @event = GetEvent(publishedEventName);
-            @event.AddPublisher<T>(publisher, eventName);
+            if(@event.Publishers.Any(p=>p.GetType() == publisher.GetType()) == false)
+                @event.AddPublisher<T>(publisher, eventName);
         }
 
         /// <summary>   Unregisters the publisher. </summary>
@@ -86,14 +88,15 @@ namespace SimpleEventBroker
         public void RegisterWakeupSubscriber(Type declaringType, SubscriptionInfo sub)
         {
             var publishedEvent = GetEvent(sub.PublishedEventName);
-            publishedEvent.AddSubscriber(declaringType, sub);
+            publishedEvent.AddWakeupSubscriber(declaringType, sub);
         }
 
         /// <summary>   Unregisters the subscriber. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="publishedEventName">   Name of the published event. </param>
         /// <param name="subscriber">           The subscriber. </param>
-        public void UnregisterSubscriber(string publishedEventName, EventHandler<EventArgs> subscriber)
+        public void UnregisterSubscriber<T>(string publishedEventName, EventHandler<T> subscriber)
+            where T : EventArgs
         {
             var @event = GetEvent(publishedEventName);
             @event.RemoveSubscriber(subscriber);
@@ -153,6 +156,56 @@ namespace SimpleEventBroker
             }
 
             deadEvents.ForEach(delegate(string eventName) { eventPublishers.Remove(eventName); });
+        }
+
+        public void UnregisterDisposedPublishers()
+        {
+            foreach ( var kvp in eventPublishers )
+            {
+                var removedPublishers = new List<object>();
+
+                foreach ( var publisher in kvp.Value.Publishers )
+                {
+                    var disposable = publisher as IDisposableEvent;
+                    if ( disposable != null && disposable.IsDisposed )
+                    {
+                        removedPublishers.Add( publisher );
+                    }
+                }
+
+                foreach ( var publisher in removedPublishers )
+                {
+                    var @event = GetEvent( kvp.Key );
+                    @event.RemoveUnTypedPublisher( publisher, kvp.Key );
+                }
+            }
+
+            RemoveDeadEvents();
+        }
+
+        public void UnregisterDisposedSubscribers()
+        {
+            foreach ( var kvp in eventPublishers )
+            {
+                var removedSubscribers = new List<object>();
+
+                foreach ( var subscriber in kvp.Value.Subscribers )
+                {
+                    var disposable = ( (dynamic)subscriber ).Target as IDisposableEvent;
+                    if ( disposable != null && disposable.IsDisposed )
+                    {
+                        removedSubscribers.Add( subscriber );
+                    }
+                }
+
+                foreach ( var subscriber in removedSubscribers )
+                {
+                    var @event = GetEvent( kvp.Key );
+                    @event.RemoveSubscriber( subscriber );
+                }
+            }
+
+            RemoveDeadEvents();
         }
     }
 }
