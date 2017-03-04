@@ -212,23 +212,24 @@ namespace SimpleEventBroker
         private void OnPublisherFiring<T>( object sender, T e )
             where T : EventArgs
         {
-            _resolvingWakeupSubscrivers = true;
-            foreach ( var subscriber in wakeupSubscribers.ToArray() )
-            {                
-                // This will call another roundup of the builder and end up adding a new subscriber automatically
-                var instance = Container.Resolve( subscriber.Item1 );
-                var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( subscriber.Item2.EventArgsType ), instance, subscriber.Item2.Subscriber );
+            //_resolvingWakeupSubscrivers = true;
+            //foreach ( var subscriber in wakeupSubscribers.ToArray() )
+            //{
+            //    // This will call another roundup of the builder and end up adding a new subscriber automatically
 
-                //var registerSubscriber = Broker.GetType().GetMethod( nameof( Broker.RegisterSubscriber ) );
+            //    var instance = Container.Resolve( subscriber.Item1 );
+            //    var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( subscriber.Item2.EventArgsType ), instance, subscriber.Item2.Subscriber );
 
-                //// This will call another roundup of the builder and end up adding a new subscriber automatically
-                //// Broker.RegisterSubscriber<T>(publishedEventName, delegate)
-                //registerSubscriber.MakeGenericMethod( subscriber.Item2.EventArgsType )
-                //                  .Invoke( Broker, new object[] { subscriber.Item2.PublishedEventName, @delegate } );
-                
-                subscribers.Add(@delegate);
-            }
-            _resolvingWakeupSubscrivers = false;
+            //    var registerSubscriber = Broker.GetType().GetMethod( nameof( Broker.RegisterSubscriber ) );
+
+            //    // This will call another roundup of the builder and end up adding a new subscriber automatically
+            //    // Broker.RegisterSubscriber<T>(publishedEventName, delegate)
+            //    registerSubscriber.MakeGenericMethod( subscriber.Item2.EventArgsType )
+            //                      .Invoke( Broker, new object[] { subscriber.Item2.PublishedEventName, @delegate } );
+
+            //    subscribers.Add( @delegate );
+            //}
+            //_resolvingWakeupSubscrivers = false;
 
             foreach ( var subscriber in subscribers )
             {

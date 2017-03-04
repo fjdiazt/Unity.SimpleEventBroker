@@ -42,9 +42,8 @@ namespace EventBrokerExtension
                 context.Policies.Set<IEventBrokerInfoPolicy>(policy, context.BuildKey);
 
                 AddPublicationsToPolicy(context.BuildKey, policy);
-                AddSubscriptionsToPolicy(context.BuildKey, policy);
-
-                AddWakeupSubscriptionsToPolicy( context.BuildKey, policy );
+                var awakeSubscribers = AddSubscriptionsToPolicy(context.BuildKey, policy);
+                //AddWakeupSubscriptionsToPolicy( context.BuildKey, policy, awakeSubscribers );
             }
         }
 
@@ -79,10 +78,10 @@ namespace EventBrokerExtension
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="buildKey"> The build key. </param>
         /// <param name="policy">   The policy. </param>
-        private void AddSubscriptionsToPolicy(NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy)
+        private IEnumerable<MethodInfo> AddSubscriptionsToPolicy(NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy)
         {
             if (buildKey.Type.IsDefined(typeof(SubscriberAttribute)) == false)
-                return;
+                return new MethodInfo[0];
 
             var subscribedMethods = buildKey.Type.GetMethods().Where( m=>m.IsDefined( typeof(SubscribesToAttribute) ) ).ToArray();
             foreach (var method in subscribedMethods )
@@ -96,38 +95,52 @@ namespace EventBrokerExtension
                     policy.AddSubscription(attr.EventName, method);
                 }
             }
+
+            return subscribedMethods;
         }
 
-        private void AddWakeupSubscriptionsToPolicy(NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy)
+        private void AddWakeupSubscriptionsToPolicy(NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy,
+            IEnumerable<MethodInfo> awakeMethods)
         {
-            var subscribedMethods = buildKey.Type.GetMethods().Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ).ToArray();
+            if(buildKey.Type.IsDefined(typeof(PublisherAttribute), false) == false)
+                return;
 
-            var methods = GetWakeupSubscriberMethods(subscribedMethods);
+            var publishedNames = buildKey
+                .Type
+                .GetEvents()
+                .Where(m => m.IsDefined(typeof(PublishesAttribute)))
+                .SelectMany(a => (PublishesAttribute[]) a.GetCustomAttributes(typeof(PublishesAttribute), false))
+                .Select(a => a.EventName);
+
+            var methods = GetWakeupSubscriberMethods()
+                .Where( m => ((SubscribesToAttribute[])m.GetCustomAttributes( typeof( SubscribesToAttribute ), true ))                    
+                .Any(a=>publishedNames.Contains(a.EventName)))
+                .Where(m=>awakeMethods.Contains(m) == false);
 
             foreach ( var method in  methods)
             {
-                var attrs = (SubscribesToAttribute[])method.GetCustomAttributes( typeof( SubscribesToAttribute ), false );
+                var attrs = method.GetCustomAttributes<SubscribesToAttribute>(true);
 
                 foreach ( var attr in attrs )
                 {
-                    if ( attr?.WakeUp == true )
+                    if(attr.WakeUp)
                         policy.AddSubscription( attr.EventName, method );
                 }
             }
         }
 
-        private IEnumerable<MethodInfo> GetWakeupSubscriberMethods(IEnumerable<MethodInfo> subscribedMethods )
+        private IEnumerable<MethodInfo> GetWakeupSubscriberMethods()
         {
             if (WakeupEventsCache != null)
                 return WakeupEventsCache;
 
-
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            WakeupEventsCache = assemblies.SelectMany( GetLoadableTypes )
-                .SelectMany( t => t.GetMethods( BindingFlags.DeclaredOnly | BindingFlags.Public |
-                                               BindingFlags.Instance )
-                                   .Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ) )
-                .Where( m => subscribedMethods.Contains( m ) == false );
+            WakeupEventsCache = AppDomain
+                .CurrentDomain
+                .GetAssemblies()
+                .SelectMany(GetLoadableTypes)
+                .SelectMany(t => t.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public |
+                                              BindingFlags.Instance)
+                                  .Where(m => m.IsDefined(typeof(SubscribesToAttribute))));
 
             return WakeupEventsCache;
         }

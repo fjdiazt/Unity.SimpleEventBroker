@@ -72,36 +72,16 @@ namespace EventBrokerExtension
         private static void BuildSubscriptions(IBuilderContext context, EventBroker.EventBroker broker, 
                                                IEventBrokerInfoPolicy policy)
         {
-            var registerSubscriber = broker.GetType().GetMethod(nameof(broker.RegisterSubscriber));
+            var registerSubscriber = broker.GetType().GetMethod( nameof( broker.RegisterSubscriber ) );
 
             foreach ( var sub in policy.Subscriptions )
             {
-                var instance = context.Existing;
+                var @delegate = Delegate.CreateDelegate
+                    ( typeof( EventHandler<> ).MakeGenericType( sub.EventArgsType ),
+                     context.Existing, sub.Subscriber );
 
-                // Handle subscribers with no instances registered
-                if (context.Existing.GetType() != sub.Subscriber.DeclaringType)
-                {
-                    if (sub.Subscriber.DeclaringType == null)
-                        throw new Exception($"Unable to get declaring type for event {sub.Subscriber.Name}");
-
-                    // For types with no parameterless constructors, save for later when
-                    // it awakes
-                    if (sub.Subscriber.DeclaringType.GetConstructor(Type.EmptyTypes) == null)
-                    {
-                        broker.RegisterWakeupSubscriber(sub.Subscriber.DeclaringType, sub);
-                        continue;
-                    }
-                    
-                    // For types with parameterless constructor, create an instance right away
-                    instance = Activator.CreateInstance(sub.Subscriber.DeclaringType);
-                }
-
-                var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( sub.EventArgsType ),
-                                                    instance, sub.Subscriber );
-
-                // Broker.RegisterSubscriber<T>(publishedEventName, delegate)
                 registerSubscriber.MakeGenericMethod( sub.EventArgsType )
-                                    .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
+                                  .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
             }
         }
 
