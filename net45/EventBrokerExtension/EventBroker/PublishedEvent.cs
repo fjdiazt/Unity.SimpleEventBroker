@@ -18,7 +18,6 @@ using System.Reflection;
 using EventBrokerExtension;
 using EventBrokerExtension.EventBroker;
 using Microsoft.Practices.Unity;
-
 #endregion
 
 namespace SimpleEventBroker
@@ -53,6 +52,8 @@ namespace SimpleEventBroker
         
         /// <summary>   The subscribers. </summary>
         private readonly List<Tuple<Type, SubscriptionInfo>> wakeupSubscribers;
+
+        private bool ResolvingWakeupSubscribers { get; set; }
 
         /// <summary>   Default constructor. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
@@ -169,15 +170,13 @@ namespace SimpleEventBroker
                            .Invoke(this, new[] {publisher, targetEvent.Name});
         }
 
-        private bool _resolvingWakeupSubscrivers;
-
         /// <summary>   Adds a subscriber. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="subscriber">   The subscriber. </param>
         public void AddSubscriber<T>( EventHandler<T> subscriber )
             where T : EventArgs
         {
-            if (_resolvingWakeupSubscrivers)
+            if (ResolvingWakeupSubscribers)
             {
                 return;
             }
@@ -186,8 +185,8 @@ namespace SimpleEventBroker
 
         internal void AddWakeupSubscriber( Type declaringType, SubscriptionInfo sub )
         {
-            if(wakeupSubscribers.Any(t=>t.Item1 == declaringType && t.Item2.Equals(sub)))
-                return;
+            //if(wakeupSubscribers.Any(t=>t.Item1 == declaringType && t.Item2.Equals(sub)))
+            //    return;
             wakeupSubscribers.Add( new Tuple<Type, SubscriptionInfo>( declaringType, sub ) );
         }
 
@@ -212,24 +211,23 @@ namespace SimpleEventBroker
         private void OnPublisherFiring<T>( object sender, T e )
             where T : EventArgs
         {
-            //_resolvingWakeupSubscrivers = true;
-            //foreach ( var subscriber in wakeupSubscribers.ToArray() )
-            //{
-            //    // This will call another roundup of the builder and end up adding a new subscriber automatically
+            ResolvingWakeupSubscribers = true;
+            foreach ( var subscriber in wakeupSubscribers.Where(s=>s.Item2.CanWakeUp && !s.Item2.IsAwake) )
+            {
+                // This will call another roundup of the builder
+                var instance = ContainerProvider.EventBrokerContainer.Resolve( subscriber.Item1 );
 
-            //    var instance = Container.Resolve( subscriber.Item1 );
-            //    var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( subscriber.Item2.EventArgsType ), instance, subscriber.Item2.Subscriber );
+                // Add the instance manually to subscriber
+                var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( subscriber.Item2.EventArgsType ), instance, subscriber.Item2.Subscriber );
 
-            //    var registerSubscriber = Broker.GetType().GetMethod( nameof( Broker.RegisterSubscriber ) );
+                var registerSubscriber = Broker.GetType().GetMethod( nameof( Broker.RegisterSubscriber ) );
 
-            //    // This will call another roundup of the builder and end up adding a new subscriber automatically
-            //    // Broker.RegisterSubscriber<T>(publishedEventName, delegate)
-            //    registerSubscriber.MakeGenericMethod( subscriber.Item2.EventArgsType )
-            //                      .Invoke( Broker, new object[] { subscriber.Item2.PublishedEventName, @delegate } );
+                registerSubscriber.MakeGenericMethod( subscriber.Item2.EventArgsType )
+                                  .Invoke( Broker, new object[] { subscriber.Item2.PublishedEventName, @delegate } );
 
-            //    subscribers.Add( @delegate );
-            //}
-            //_resolvingWakeupSubscrivers = false;
+                subscribers.Add( @delegate );
+            }
+            ResolvingWakeupSubscribers = false;
 
             foreach ( var subscriber in subscribers )
             {

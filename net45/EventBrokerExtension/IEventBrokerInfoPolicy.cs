@@ -69,14 +69,29 @@ namespace EventBrokerExtension
 
         public Type EventArgsType { get; }
 
-        /// <summary>   Constructor. </summary>
-        /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-        /// <param name="publishedEventName">   Name of the published event. </param>
-        /// <param name="subscriber">           The subscriber. </param>
-        public SubscriptionInfo(string publishedEventName, MethodInfo subscriber)
+        public bool CanWakeUp { get; }
+
+        public bool IsAwake { get; set; }
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="publishedEventName">Name of the published event.</param>
+        /// <param name="subscriber">The subscriber.</param>
+        /// <param name="canWakeUp">if set to <c>true</c> [can wake up].</param>
+        /// <param name="isAwake">if set to <c>true</c> [is awake].</param>
+        /// <exception cref="System.Exception">
+        /// Subscriber method must have an EventArgs parameter as the second argument
+        /// </exception>
+        /// <remarks>
+        /// Sander.struijk, 14.05.2014.
+        /// </remarks>
+        public SubscriptionInfo(string publishedEventName, MethodInfo subscriber, bool canWakeUp = false, bool isAwake = false)
         {
             PublishedEventName = publishedEventName;
             Subscriber = subscriber;
+            CanWakeUp = canWakeUp;
+            IsAwake = isAwake;
 
             try
             {

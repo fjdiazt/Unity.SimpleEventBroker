@@ -12,6 +12,9 @@
 #region Using statements
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using Microsoft.Practices.ObjectBuilder2;
 
 #endregion
@@ -22,6 +25,8 @@ namespace EventBrokerExtension
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     public class EventBrokerWireupStrategy : BuilderStrategy
     {
+        private static IEnumerable<MethodInfo> WakeupEventsCache { get; set; }
+
         private bool BuildingUp { get; set; }
 
         /// <summary>   Pre build up. </summary>
@@ -69,19 +74,27 @@ namespace EventBrokerExtension
             }
         }
 
-        private static void BuildSubscriptions(IBuilderContext context, EventBroker.EventBroker broker, 
+        private void BuildSubscriptions(IBuilderContext context, EventBroker.EventBroker broker, 
                                                IEventBrokerInfoPolicy policy)
         {
             var registerSubscriber = broker.GetType().GetMethod( nameof( broker.RegisterSubscriber ) );
 
-            foreach ( var sub in policy.Subscriptions )
+            foreach ( var sub in policy.Subscriptions.Where(s=>s.IsAwake) )
             {
-                var @delegate = Delegate.CreateDelegate
-                    ( typeof( EventHandler<> ).MakeGenericType( sub.EventArgsType ),
-                     context.Existing, sub.Subscriber );
+                var @delegate = Delegate
+                    .CreateDelegate(typeof(EventHandler<>).MakeGenericType(sub.EventArgsType),
+                                    context.Existing, sub.Subscriber);
 
                 registerSubscriber.MakeGenericMethod( sub.EventArgsType )
                                   .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
+            }
+
+            foreach ( var sub in policy.Subscriptions.Where( s => s.CanWakeUp && !s.IsAwake ) )
+            {
+                if ( sub.Subscriber.DeclaringType == null )
+                    throw new Exception( $"Unable to get declaring type for event {sub.Subscriber.Name}" );
+
+                broker.RegisterWakeupSubscriber( sub.Subscriber.DeclaringType, sub );
             }
         }
 
@@ -109,6 +122,36 @@ namespace EventBrokerExtension
             if(broker == null)
                 throw new InvalidOperationException("No event broker available");
             return broker;
+        }
+
+        private IEnumerable<MethodInfo> GetWakeupSubscriberMethods()
+        {
+            if ( WakeupEventsCache != null )
+                return WakeupEventsCache;
+
+            WakeupEventsCache = AppDomain
+                .CurrentDomain
+                .GetAssemblies()
+                .SelectMany(GetLoadableTypes)
+                .SelectMany(t => t.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public |
+                                              BindingFlags.Instance)
+                                  .Where(m => m.IsDefined(typeof(SubscribesToAttribute))))
+                .Where(m => m.GetCustomAttributes<SubscribesToAttribute>()
+                             .Any(a => a.WakeUp));
+
+            return WakeupEventsCache;
+        }
+
+        private static IEnumerable<Type> GetLoadableTypes( Assembly assembly )
+        {
+            try
+            {
+                return assembly.GetTypes().Where( t => t.IsPublic && t.IsDefined( typeof( SubscriberAttribute ) ) );
+            }
+            catch ( ReflectionTypeLoadException e )
+            {
+                return e.Types.Where( t => t != null );
+            }
         }
     }
 }

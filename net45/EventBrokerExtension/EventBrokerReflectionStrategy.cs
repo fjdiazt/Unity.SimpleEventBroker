@@ -43,7 +43,8 @@ namespace EventBrokerExtension
 
                 AddPublicationsToPolicy(context.BuildKey, policy);
                 var awakeSubscribers = AddSubscriptionsToPolicy(context.BuildKey, policy);
-                //AddWakeupSubscriptionsToPolicy( context.BuildKey, policy, awakeSubscribers );
+                //var awakeSubscribers = new MethodInfo[0];
+                AddWakeupSubscriptionsToPolicy( context.BuildKey, policy, awakeSubscribers );
             }
         }
 
@@ -78,10 +79,13 @@ namespace EventBrokerExtension
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="buildKey"> The build key. </param>
         /// <param name="policy">   The policy. </param>
-        private IEnumerable<MethodInfo> AddSubscriptionsToPolicy(NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy)
+        private IEnumerable<SubscriptionInfo> AddSubscriptionsToPolicy(NamedTypeBuildKey buildKey, 
+                                                                EventBrokerInfoPolicy policy)
         {
             if (buildKey.Type.IsDefined(typeof(SubscriberAttribute)) == false)
-                return new MethodInfo[0];
+                return new SubscriptionInfo[0];
+
+            var awakeMethods = new List<SubscriptionInfo>();
 
             var subscribedMethods = buildKey.Type.GetMethods().Where( m=>m.IsDefined( typeof(SubscribesToAttribute) ) ).ToArray();
             foreach (var method in subscribedMethods )
@@ -92,15 +96,16 @@ namespace EventBrokerExtension
 
                 foreach (var attr in attrs)
                 {
-                    policy.AddSubscription(attr.EventName, method);
+                    var subInfo = policy.AddSubscription(attr.EventName, method, isAwake: true);
+                    awakeMethods.Add(subInfo);
                 }
             }
 
-            return subscribedMethods;
+            return awakeMethods;
         }
 
         private void AddWakeupSubscriptionsToPolicy(NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy,
-            IEnumerable<MethodInfo> awakeMethods)
+            IEnumerable<SubscriptionInfo> awakeMethods)
         {
             if(buildKey.Type.IsDefined(typeof(PublisherAttribute), false) == false)
                 return;
@@ -113,18 +118,27 @@ namespace EventBrokerExtension
                 .Select(a => a.EventName);
 
             var methods = GetWakeupSubscriberMethods()
-                .Where( m => ((SubscribesToAttribute[])m.GetCustomAttributes( typeof( SubscribesToAttribute ), true ))                    
-                .Any(a=>publishedNames.Contains(a.EventName)))
-                .Where(m=>awakeMethods.Contains(m) == false);
+                .Where(m => ((SubscribesToAttribute[]) m.GetCustomAttributes(typeof(SubscribesToAttribute),
+                                                                             false))
+                                .Any(a => publishedNames.Contains(a.EventName)))
+                .Where(m =>awakeMethods.Any(a=>a.Subscriber.Name == m.Name) == false);
 
             foreach ( var method in  methods)
             {
-                var attrs = method.GetCustomAttributes<SubscribesToAttribute>(true);
+                var attrs = method.GetCustomAttributes<SubscribesToAttribute>(false);
 
                 foreach ( var attr in attrs )
                 {
-                    if(attr.WakeUp)
-                        policy.AddSubscription( attr.EventName, method );
+                    var isNew = attr.WakeUp &&
+                                !policy.Subscriptions
+                                       .Any(p => p.Subscriber.Name == method.Name &&
+                                                 p.PublishedEventName == attr.EventName &&
+                                                 p.Subscriber.DeclaringType == method.DeclaringType &&
+                                                 p.IsAwake == false);
+                    if (isNew)
+                    {
+                        policy.AddSubscription( attr.EventName, method, attr.WakeUp );
+                    }
                 }
             }
         }
@@ -137,10 +151,13 @@ namespace EventBrokerExtension
             WakeupEventsCache = AppDomain
                 .CurrentDomain
                 .GetAssemblies()
-                .SelectMany(GetLoadableTypes)
-                .SelectMany(t => t.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public |
-                                              BindingFlags.Instance)
-                                  .Where(m => m.IsDefined(typeof(SubscribesToAttribute))));
+                .Where( a => !a.FullName.StartsWith( "Microsoft" )
+                             && !a.FullName.StartsWith( "System" )
+                             && !a.FullName.StartsWith( "Common" ) )
+                .SelectMany( GetLoadableTypes )
+                .Where( t => t.IsDefined( typeof( SubscriberAttribute ), false ) )
+                .SelectMany( t => t.GetMethods()
+                                   .Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ) );
 
             return WakeupEventsCache;
         }

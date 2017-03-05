@@ -51,13 +51,22 @@ namespace EventBrokerExtension
             publications.Add(new PublicationInfo(publishedEventName, eventName));
         }
 
-        /// <summary>   Adds a subscription to 'subscriber'. </summary>
-        /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-        /// <param name="publishedEventName">   Name of the published event. </param>
-        /// <param name="subscriber">           The subscriber. </param>
-        public void AddSubscription(string publishedEventName, MethodInfo subscriber)
+        /// <summary>
+        /// Adds a subscription to 'subscriber'.
+        /// </summary>
+        /// <param name="publishedEventName">Name of the published event.</param>
+        /// <param name="subscriber">The subscriber.</param>
+        /// <param name="canWakeUp">if set to <c>true</c> [can wake up].</param>
+        /// <param name="isAwake">if set to <c>true</c> [is awake].</param>
+        /// <remarks>
+        /// Sander.struijk, 14.05.2014.
+        /// </remarks>
+        public SubscriptionInfo AddSubscription(string publishedEventName, MethodInfo subscriber, 
+                                                bool canWakeUp = false, bool isAwake = false)
         {
-            subscriptions.Add(new SubscriptionInfo(publishedEventName, subscriber));
+            var sub = new SubscriptionInfo(publishedEventName, subscriber, canWakeUp, isAwake);
+            subscriptions.Add(sub);
+            return sub;
         }
     }
 }
