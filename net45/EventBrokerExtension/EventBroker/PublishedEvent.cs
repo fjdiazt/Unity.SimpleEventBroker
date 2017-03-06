@@ -15,21 +15,29 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using EventBrokerExtension;
-using EventBrokerExtension.EventBroker;
 using Microsoft.Practices.Unity;
+
 #endregion
 
-namespace SimpleEventBroker
+namespace EventBrokerExtension.EventBroker
 {
     /// <summary>   A published event. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     public class PublishedEvent
     {
+        /// <summary>
+        /// The Unity Container provider to resolve types that can awake automatically.
+        /// </summary>
         public static class ContainerProvider
         {
             private static IUnityContainer _container;
 
+            /// <summary>
+            /// Gets or sets the event broker container.
+            /// </summary>
+            /// <value>
+            /// The event broker container.
+            /// </value>
             public static IUnityContainer EventBrokerContainer
             {
                 get
@@ -45,25 +53,25 @@ namespace SimpleEventBroker
         private EventBroker Broker { get; }
 
         /// <summary>   The publishers. </summary>
-        private readonly List<dynamic> publishers;
+        private readonly List<dynamic> _publishers;
 
         /// <summary>   The subscribers. </summary>
-        private readonly List<dynamic> subscribers;
-        
+        private readonly List<dynamic> _subscribers;
+
         /// <summary>   The subscribers. </summary>
-        private readonly List<Tuple<Type, SubscriptionInfo>> wakeupSubscribers;
+        private readonly List<Tuple<Type, SubscriptionInfo>> _wakeupSubscribers;
 
         private bool ResolvingWakeupSubscribers { get; set; }
 
         /// <summary>   Default constructor. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-        public PublishedEvent(IUnityContainer container, EventBroker broker)
+        public PublishedEvent( IUnityContainer container, EventBroker broker )
         {
             Container = container;
             Broker = broker;
-            publishers = new List<dynamic>();
-            subscribers = new List<dynamic>();
-            wakeupSubscribers = new List<Tuple<Type, SubscriptionInfo>>();
+            _publishers = new List<dynamic>();
+            _subscribers = new List<dynamic>();
+            _wakeupSubscribers = new List<Tuple<Type, SubscriptionInfo>>();
         }
 
         /// <summary>   Gets the publishers. </summary>
@@ -72,7 +80,7 @@ namespace SimpleEventBroker
         {
             get
             {
-                foreach ( var publisher in publishers )
+                foreach ( var publisher in _publishers )
                 {
                     yield return publisher;
                 }
@@ -85,18 +93,24 @@ namespace SimpleEventBroker
         {
             get
             {
-                foreach ( var subscriber in subscribers )
+                foreach ( var subscriber in _subscribers )
                 {
                     yield return subscriber;
                 }
             }
         }
 
+        /// <summary>
+        /// Gets the subscribers that can be awaken automatically.
+        /// </summary>
+        /// <value>
+        /// The wakeup subscribers.
+        /// </value>
         public IEnumerable<dynamic> WakeupSubscribers
         {
             get
             {
-                foreach ( var subscriber in wakeupSubscribers )
+                foreach ( var subscriber in _wakeupSubscribers )
                 {
                     yield return subscriber;
                 }
@@ -110,7 +124,7 @@ namespace SimpleEventBroker
         /// <value> true if this SimpleEventBroker.PublishedEvent has publishers, false if not. </value>
         public bool HasPublishers
         {
-            get { return publishers.Count > 0; }
+            get { return _publishers.Count > 0; }
         }
 
         /// <summary>
@@ -120,7 +134,7 @@ namespace SimpleEventBroker
         /// <value> true if this SimpleEventBroker.PublishedEvent has subscribers, false if not. </value>
         public bool HasSubscribers
         {
-            get { return subscribers.Count > 0; }
+            get { return _subscribers.Count > 0; }
         }
 
         /// <summary>   Adds a publisher to 'eventName'. </summary>
@@ -130,7 +144,7 @@ namespace SimpleEventBroker
         public void AddPublisher<T>( object publisher, string eventName )
             where T : EventArgs
         {
-            publishers.Add( publisher );
+            _publishers.Add( publisher );
             var targetEvent = publisher.GetType().GetEvent( eventName );
             GuardEventExists( eventName, publisher, targetEvent );
 
@@ -148,7 +162,7 @@ namespace SimpleEventBroker
         public void RemovePublisher<T>( object publisher, string eventName )
             where T : EventArgs
         {
-            publishers.Remove( publisher );
+            _publishers.Remove( publisher );
             var targetEvent = publisher.GetType().GetEvent( eventName );
             GuardEventExists( eventName, publisher, targetEvent );
 
@@ -159,15 +173,20 @@ namespace SimpleEventBroker
             removeEventMethod.Invoke( publisher, new object[] { subscriber } );
         }
 
+        /// <summary>
+        /// Removes the publisher unsafely, treating it as a dynamic type.
+        /// </summary>
+        /// <param name="publisher">The publisher.</param>
+        /// <param name="eventName">Name of the event.</param>
         public void RemoveUnTypedPublisher( object publisher, string eventName )
         {
             var targetEvent = publisher.GetType().GetEvents()
-                .FirstOrDefault(e=>e.IsDefined(typeof(PublishesAttribute)));
-            GuardEventExists(eventName, publisher, targetEvent);
+                .FirstOrDefault( e => e.IsDefined( typeof( PublishesAttribute ) ) );
+            GuardEventExists( eventName, publisher, targetEvent );
 
             var removePublisher = GetType().GetMethod( nameof( RemovePublisher ) );
-            removePublisher.MakeGenericMethod(targetEvent.EventHandlerType.GenericTypeArguments[0])
-                           .Invoke(this, new[] {publisher, targetEvent.Name});
+            removePublisher.MakeGenericMethod( targetEvent.EventHandlerType.GenericTypeArguments[ 0 ] )
+                           .Invoke( this, new[] { publisher, targetEvent.Name } );
         }
 
         /// <summary>   Adds a subscriber. </summary>
@@ -176,18 +195,18 @@ namespace SimpleEventBroker
         public void AddSubscriber<T>( EventHandler<T> subscriber )
             where T : EventArgs
         {
-            if (ResolvingWakeupSubscribers)
+            if ( ResolvingWakeupSubscribers )
             {
                 return;
             }
-            subscribers.Add( subscriber );
+            _subscribers.Add( subscriber );
         }
 
         internal void AddWakeupSubscriber( Type declaringType, SubscriptionInfo sub )
         {
-            //if(wakeupSubscribers.Any(t=>t.Item1 == declaringType && t.Item2.Equals(sub)))
-            //    return;
-            wakeupSubscribers.Add( new Tuple<Type, SubscriptionInfo>( declaringType, sub ) );
+            if( _wakeupSubscribers.Any(t=>t.Item1 == declaringType && t.Item2.Equals(sub)))
+                return;
+            _wakeupSubscribers.Add( new Tuple<Type, SubscriptionInfo>( declaringType, sub ) );
         }
 
         /// <summary>   Removes the subscriber described by subscriber. </summary>
@@ -196,12 +215,12 @@ namespace SimpleEventBroker
         public void RemoveSubscriber<T>( EventHandler<T> subscriber )
             where T : EventArgs
         {
-            subscribers.Remove( subscriber );
+            _subscribers.Remove( subscriber );
         }
 
         public void RemoveSubscriber( dynamic subscriber )
         {
-            subscribers.Remove( subscriber );
+            _subscribers.Remove( subscriber );
         }
 
         /// <summary>   Raises the publisher firing event. </summary>
@@ -211,9 +230,28 @@ namespace SimpleEventBroker
         private void OnPublisherFiring<T>( object sender, T e )
             where T : EventArgs
         {
-            ResolvingWakeupSubscribers = true;
-            foreach ( var subscriber in wakeupSubscribers.Where(s=>s.Item2.CanWakeUp && !s.Item2.IsAwake) )
+            AwakeSubscribers<T>();
+
+            foreach ( var subscriber in _subscribers )
             {
+                var sub = (EventHandler<T>)subscriber;
+                sub( sender, e );
+            }
+        }
+
+        private void AwakeSubscribers<T>()
+            where T : EventArgs
+        {
+            ResolvingWakeupSubscribers = true;
+            var subsAwake = _subscribers.Cast<EventHandler<T>>()
+                                        .Select( s => new Tuple<Type, string>( s.Target.GetType(), s.Method.Name ) )
+                                        .ToArray();
+
+            foreach ( var subscriber in _wakeupSubscribers.Where( s => s.Item2.CanWakeUp && !s.Item2.IsAwake ) )
+            {
+                if ( subsAwake.Contains( new Tuple<Type, string>( subscriber.Item1, subscriber.Item2.Subscriber.Name ) ) )
+                    continue;
+
                 // This will call another roundup of the builder
                 var instance = ContainerProvider.EventBrokerContainer.Resolve( subscriber.Item1 );
 
@@ -225,15 +263,9 @@ namespace SimpleEventBroker
                 registerSubscriber.MakeGenericMethod( subscriber.Item2.EventArgsType )
                                   .Invoke( Broker, new object[] { subscriber.Item2.PublishedEventName, @delegate } );
 
-                subscribers.Add( @delegate );
+                _subscribers.Add( @delegate );
             }
             ResolvingWakeupSubscribers = false;
-
-            foreach ( var subscriber in subscribers )
-            {
-                var sub = (EventHandler<T>)subscriber;
-                sub( sender, e );
-            }            
         }
 
         /// <summary>   Queries if a given guard event exists. </summary>
@@ -248,9 +280,8 @@ namespace SimpleEventBroker
         private static void GuardEventExists( string eventName, object publisher, EventInfo targetEvent )
         {
             if ( targetEvent == null )
-                throw new ArgumentException( string.Format( "The event '{0}' is not implemented on type '{1}'",
-                        eventName,
-                        publisher.GetType().Name ) );
+                throw new ArgumentException(
+                    $"The event '{eventName}' is not implemented on type '{publisher.GetType().Name}'");
         }
 
         /// <summary>   Queries if a given guard add method exists. </summary>
@@ -263,8 +294,7 @@ namespace SimpleEventBroker
         private static void GuardAddMethodExists( EventInfo targetEvent )
         {
             if ( targetEvent.GetAddMethod() == null )
-                throw new ArgumentException( string.Format( "The event '{0}' does not have a public Add method",
-                        targetEvent.Name ) );
+                throw new ArgumentException($"The event '{targetEvent.Name}' does not have a public Add method");
         }
 
         /// <summary>   Queries if a given guard remove method exists. </summary>
@@ -277,8 +307,7 @@ namespace SimpleEventBroker
         private static void GuardRemoveMethodExists( EventInfo targetEvent )
         {
             if ( targetEvent.GetRemoveMethod() == null )
-                throw new ArgumentException( string.Format( "The event '{0}' does not have a public Remove method",
-                        targetEvent.Name ) );
+                throw new ArgumentException($"The event '{targetEvent.Name}' does not have a public Remove method");
         }
     }
 }

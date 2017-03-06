@@ -24,7 +24,7 @@ namespace EventBrokerExtension
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     public abstract class PublishSubscribeAttribute : Attribute
     {
-        /// <summary>   Specialised constructor for use only by derived classes. </summary>
+        /// <summary>   Specialized constructor for use only by derived classes. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="eventName">    The name of the event. </param>
         protected PublishSubscribeAttribute(string eventName)

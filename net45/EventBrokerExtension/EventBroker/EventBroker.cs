@@ -15,7 +15,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Practices.Unity;
-using SimpleEventBroker;
 
 #endregion
 
@@ -158,7 +157,11 @@ namespace EventBrokerExtension.EventBroker
             deadEvents.ForEach(delegate(string eventName) { eventPublishers.Remove(eventName); });
         }
 
-        public void UnregisterDisposedPublishers()
+        /// <summary>
+        /// Unregisters the publishers implementing the IUnsubscribable event that have been
+        /// flagged.
+        /// </summary>
+        public void UnregisterFlaggedPublishers()
         {
             foreach ( var kvp in eventPublishers )
             {
@@ -166,8 +169,8 @@ namespace EventBrokerExtension.EventBroker
 
                 foreach ( var publisher in kvp.Value.Publishers )
                 {
-                    var disposable = publisher as IDisposableEvent;
-                    if ( disposable != null && disposable.IsDisposed )
+                    var disposable = publisher as IUnsubscribableEvent;
+                    if ( disposable != null && disposable.Unsubscribe )
                     {
                         removedPublishers.Add( publisher );
                     }
@@ -183,7 +186,11 @@ namespace EventBrokerExtension.EventBroker
             RemoveDeadEvents();
         }
 
-        public void UnregisterDisposedSubscribers()
+        /// <summary>
+        /// Unregisters the subscribers implementing the IUnsubscribable event that have been
+        /// flagged.
+        /// </summary>
+        public void UnregisterFlaggedSubscribers()
         {
             foreach ( var kvp in eventPublishers )
             {
@@ -191,8 +198,8 @@ namespace EventBrokerExtension.EventBroker
 
                 foreach ( var subscriber in kvp.Value.Subscribers )
                 {
-                    var disposable = ( (dynamic)subscriber ).Target as IDisposableEvent;
-                    if ( disposable != null && disposable.IsDisposed )
+                    var disposable = ( (dynamic)subscriber ).Target as IUnsubscribableEvent;
+                    if ( disposable != null && disposable.Unsubscribe )
                     {
                         removedSubscribers.Add( subscriber );
                     }
