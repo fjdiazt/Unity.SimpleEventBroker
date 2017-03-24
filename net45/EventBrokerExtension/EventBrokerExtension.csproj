@@ -106,6 +106,7 @@
     <Compile Include="EventBrokerInfoPolicy.cs" />
     <Compile Include="EventBrokerReflectionStrategy.cs" />
     <Compile Include="EventBrokerWireupStrategy.cs" />
+    <Compile Include="EventBroker\ContainerProvider.cs" />
     <Compile Include="EventBroker\EventBroker.cs" />
     <Compile Include="EventBroker\PublishedEvent.cs" />
     <Compile Include="IEventBrokerInfoPolicy.cs" />

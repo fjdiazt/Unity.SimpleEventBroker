@@ -21,35 +21,11 @@ using Microsoft.Practices.Unity;
 
 namespace EventBrokerExtension.EventBroker
 {
-    /// <summary>   A published event. </summary>
-    /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
+    /// <summary>
+    /// A published event.
+    /// </summary>
     public class PublishedEvent
     {
-        /// <summary>
-        /// The Unity Container provider to resolve types that can awake automatically.
-        /// </summary>
-        public static class ContainerProvider
-        {
-            private static IUnityContainer _container;
-
-            /// <summary>
-            /// Gets or sets the event broker container.
-            /// </summary>
-            /// <value>
-            /// The event broker container.
-            /// </value>
-            public static IUnityContainer EventBrokerContainer
-            {
-                get
-                {
-                    return _container ?? Container;
-                }
-                set { _container = value; }
-            }
-        }
-
-        private static IUnityContainer Container { get; set; }
-
         private EventBroker Broker { get; }
 
         /// <summary>   The publishers. </summary>
@@ -63,42 +39,33 @@ namespace EventBrokerExtension.EventBroker
 
         private bool ResolvingWakeupSubscribers { get; set; }
 
-        /// <summary>   Default constructor. </summary>
-        /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
-        public PublishedEvent( IUnityContainer container, EventBroker broker )
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="broker">The broker.</param>
+        public PublishedEvent( EventBroker broker )
         {
-            Container = container;
             Broker = broker;
             _publishers = new List<dynamic>();
             _subscribers = new List<dynamic>();
             _wakeupSubscribers = new List<Tuple<Type, SubscriptionInfo>>();
         }
 
-        /// <summary>   Gets the publishers. </summary>
-        /// <value> The publishers. </value>
-        public IEnumerable<object> Publishers
-        {
-            get
-            {
-                foreach ( var publisher in _publishers )
-                {
-                    yield return publisher;
-                }
-            }
-        }
+        /// <summary>
+        /// Gets the publishers.
+        /// </summary>
+        /// <value>
+        /// The publishers.
+        /// </value>
+        public IEnumerable<object> Publishers => _publishers;
 
-        /// <summary>   Gets the subscribers. </summary>
-        /// <value> The subscribers. </value>
-        public IEnumerable<object> Subscribers
-        {
-            get
-            {
-                foreach ( var subscriber in _subscribers )
-                {
-                    yield return subscriber;
-                }
-            }
-        }
+        /// <summary>
+        /// Gets the subscribers.
+        /// </summary>
+        /// <value>
+        /// The subscribers.
+        /// </value>
+        public IEnumerable<object> Subscribers => _subscribers;
 
         /// <summary>
         /// Gets the subscribers that can be awaken automatically.
@@ -106,36 +73,21 @@ namespace EventBrokerExtension.EventBroker
         /// <value>
         /// The wakeup subscribers.
         /// </value>
-        public IEnumerable<dynamic> WakeupSubscribers
-        {
-            get
-            {
-                foreach ( var subscriber in _wakeupSubscribers )
-                {
-                    yield return subscriber;
-                }
-            }
-        }
+        public IEnumerable<dynamic> WakeupSubscribers => _wakeupSubscribers;
 
         /// <summary>
         ///     Gets a value indicating whether this SimpleEventBroker.PublishedEvent has
         ///     publishers.
         /// </summary>
         /// <value> true if this SimpleEventBroker.PublishedEvent has publishers, false if not. </value>
-        public bool HasPublishers
-        {
-            get { return _publishers.Count > 0; }
-        }
+        public bool HasPublishers => _publishers.Count > 0;
 
         /// <summary>
         ///     Gets a value indicating whether this SimpleEventBroker.PublishedEvent has
         ///     subscribers.
         /// </summary>
         /// <value> true if this SimpleEventBroker.PublishedEvent has subscribers, false if not. </value>
-        public bool HasSubscribers
-        {
-            get { return _subscribers.Count > 0; }
-        }
+        public bool HasSubscribers => _subscribers.Count > 0;
 
         /// <summary>   Adds a publisher to 'eventName'. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
@@ -204,7 +156,7 @@ namespace EventBrokerExtension.EventBroker
 
         internal void AddWakeupSubscriber( Type declaringType, SubscriptionInfo sub )
         {
-            if( _wakeupSubscribers.Any(t=>t.Item1 == declaringType && t.Item2.Equals(sub)))
+            if ( _wakeupSubscribers.Any( t => t.Item1 == declaringType && t.Item2.Equals( sub ) ) )
                 return;
             _wakeupSubscribers.Add( new Tuple<Type, SubscriptionInfo>( declaringType, sub ) );
         }
@@ -218,6 +170,10 @@ namespace EventBrokerExtension.EventBroker
             _subscribers.Remove( subscriber );
         }
 
+        /// <summary>
+        /// Removes the subscriber.
+        /// </summary>
+        /// <param name="subscriber">The subscriber.</param>
         public void RemoveSubscriber( dynamic subscriber )
         {
             _subscribers.Remove( subscriber );
@@ -243,17 +199,23 @@ namespace EventBrokerExtension.EventBroker
             where T : EventArgs
         {
             ResolvingWakeupSubscribers = true;
-            var subsAwake = _subscribers.Cast<EventHandler<T>>()
+
+            var subscribersToAwake = _wakeupSubscribers.Where( s => s.Item2.CanWakeUp && !s.Item2.IsAwake ).ToArray();
+
+            if ( subscribersToAwake.Any() && ContainerProvider.Current == null )
+                throw new Exception( "No IUnityContainer has been registered to resolve awake-able subscribers (use ContainerProvider.Register method)" );
+
+            var subscribersAwake = _subscribers.Cast<EventHandler<T>>()
                                         .Select( s => new Tuple<Type, string>( s.Target.GetType(), s.Method.Name ) )
                                         .ToArray();
 
-            foreach ( var subscriber in _wakeupSubscribers.Where( s => s.Item2.CanWakeUp && !s.Item2.IsAwake ) )
+            foreach ( var subscriber in subscribersToAwake )
             {
-                if ( subsAwake.Contains( new Tuple<Type, string>( subscriber.Item1, subscriber.Item2.Subscriber.Name ) ) )
+                if ( subscribersAwake.Contains( new Tuple<Type, string>( subscriber.Item1, subscriber.Item2.Subscriber.Name ) ) )
                     continue;
 
                 // This will call another roundup of the builder
-                var instance = ContainerProvider.EventBrokerContainer.Resolve( subscriber.Item1 );
+                var instance = ContainerProvider.Current.Resolve( subscriber.Item1 );
 
                 // Add the instance manually to subscriber
                 var @delegate = Delegate.CreateDelegate( typeof( EventHandler<> ).MakeGenericType( subscriber.Item2.EventArgsType ), instance, subscriber.Item2.Subscriber );
@@ -281,7 +243,7 @@ namespace EventBrokerExtension.EventBroker
         {
             if ( targetEvent == null )
                 throw new ArgumentException(
-                    $"The event '{eventName}' is not implemented on type '{publisher.GetType().Name}'");
+                    $"The event '{eventName}' is not implemented on type '{publisher.GetType().Name}'" );
         }
 
         /// <summary>   Queries if a given guard add method exists. </summary>
@@ -294,7 +256,7 @@ namespace EventBrokerExtension.EventBroker
         private static void GuardAddMethodExists( EventInfo targetEvent )
         {
             if ( targetEvent.GetAddMethod() == null )
-                throw new ArgumentException($"The event '{targetEvent.Name}' does not have a public Add method");
+                throw new ArgumentException( $"The event '{targetEvent.Name}' does not have a public Add method" );
         }
 
         /// <summary>   Queries if a given guard remove method exists. </summary>
@@ -307,7 +269,7 @@ namespace EventBrokerExtension.EventBroker
         private static void GuardRemoveMethodExists( EventInfo targetEvent )
         {
             if ( targetEvent.GetRemoveMethod() == null )
-                throw new ArgumentException($"The event '{targetEvent.Name}' does not have a public Remove method");
+                throw new ArgumentException( $"The event '{targetEvent.Name}' does not have a public Remove method" );
         }
     }
 }

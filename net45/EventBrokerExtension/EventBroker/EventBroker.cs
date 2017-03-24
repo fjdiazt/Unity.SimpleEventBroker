@@ -139,7 +139,7 @@ namespace EventBrokerExtension.EventBroker
         private PublishedEvent GetEvent(string eventName)
         {
             if(!eventPublishers.ContainsKey(eventName))
-                eventPublishers[eventName] = new PublishedEvent(Container, this);
+                eventPublishers[eventName] = new PublishedEvent(this);
             return eventPublishers[eventName];
         }
 
