@@ -55,6 +55,12 @@ namespace EventBrokerExtension
             }
         }
 
+        /// <summary>
+        /// Called during the chain of responsibility for a build operation. The
+        /// PostBuildUp method is called when the chain has finished the PreBuildUp
+        /// phase and executes in reverse order from the PreBuildUp calls.
+        /// </summary>
+        /// <param name="context">Context of the build operation.</param>
         public override void PostBuildUp(IBuilderContext context)
         {
             BuildingUp = false;
@@ -89,7 +95,7 @@ namespace EventBrokerExtension
                                   .Invoke( broker, new object[] { sub.PublishedEventName, @delegate } );
             }
 
-            foreach ( var sub in policy.Subscriptions.Where( s => s.CanWakeUp && !s.IsAwake ) )
+            foreach ( var sub in policy.Subscriptions.Where( s => s.Awakable && !s.IsAwake ) )
             {
                 if ( sub.Subscriber.DeclaringType == null )
                     throw new Exception( $"Unable to get declaring type for event {sub.Subscriber.Name}" );
@@ -137,7 +143,7 @@ namespace EventBrokerExtension
                                               BindingFlags.Instance)
                                   .Where(m => m.IsDefined(typeof(SubscribesToAttribute))))
                 .Where(m => m.GetCustomAttributes<SubscribesToAttribute>()
-                             .Any(a => a.WakeUp));
+                             .Any(a => a.Awakable));
 
             return WakeupEventsCache;
         }

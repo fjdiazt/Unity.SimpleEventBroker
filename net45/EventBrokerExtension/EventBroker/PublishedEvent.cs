@@ -35,9 +35,9 @@ namespace EventBrokerExtension.EventBroker
         private readonly List<dynamic> _subscribers;
 
         /// <summary>   The subscribers. </summary>
-        private readonly List<Tuple<Type, SubscriptionInfo>> _wakeupSubscribers;
+        private readonly List<Tuple<Type, SubscriptionInfo>> _awakableSubscribers;
 
-        private bool ResolvingWakeupSubscribers { get; set; }
+        private bool ResolvingAwakableSubscribers { get; set; }
 
         /// <summary>
         /// Default constructor.
@@ -48,7 +48,7 @@ namespace EventBrokerExtension.EventBroker
             Broker = broker;
             _publishers = new List<dynamic>();
             _subscribers = new List<dynamic>();
-            _wakeupSubscribers = new List<Tuple<Type, SubscriptionInfo>>();
+            _awakableSubscribers = new List<Tuple<Type, SubscriptionInfo>>();
         }
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace EventBrokerExtension.EventBroker
         /// <value>
         /// The wakeup subscribers.
         /// </value>
-        public IEnumerable<dynamic> WakeupSubscribers => _wakeupSubscribers;
+        public IEnumerable<dynamic> AwakableSubscribers => _awakableSubscribers;
 
         /// <summary>
         ///     Gets a value indicating whether this SimpleEventBroker.PublishedEvent has
@@ -147,18 +147,18 @@ namespace EventBrokerExtension.EventBroker
         public void AddSubscriber<T>( EventHandler<T> subscriber )
             where T : EventArgs
         {
-            if ( ResolvingWakeupSubscribers )
+            if ( ResolvingAwakableSubscribers )
             {
                 return;
             }
             _subscribers.Add( subscriber );
         }
 
-        internal void AddWakeupSubscriber( Type declaringType, SubscriptionInfo sub )
+        internal void AddAwakableSubscriber( Type declaringType, SubscriptionInfo sub )
         {
-            if ( _wakeupSubscribers.Any( t => t.Item1 == declaringType && t.Item2.Equals( sub ) ) )
+            if ( _awakableSubscribers.Any( t => t.Item1 == declaringType && t.Item2.Equals( sub ) ) )
                 return;
-            _wakeupSubscribers.Add( new Tuple<Type, SubscriptionInfo>( declaringType, sub ) );
+            _awakableSubscribers.Add( new Tuple<Type, SubscriptionInfo>( declaringType, sub ) );
         }
 
         /// <summary>   Removes the subscriber described by subscriber. </summary>
@@ -198,20 +198,20 @@ namespace EventBrokerExtension.EventBroker
         private void AwakeSubscribers<T>()
             where T : EventArgs
         {
-            ResolvingWakeupSubscribers = true;
+            ResolvingAwakableSubscribers = true;
 
-            var subscribersToAwake = _wakeupSubscribers.Where( s => s.Item2.CanWakeUp && !s.Item2.IsAwake ).ToArray();
+            var subscribersToAwake = _awakableSubscribers.Where( s => s.Item2.Awakable && !s.Item2.IsAwake ).ToArray();
 
             if ( subscribersToAwake.Any() && ContainerProvider.Current == null )
-                throw new Exception( "No IUnityContainer has been registered to resolve awake-able subscribers (use ContainerProvider.Register method)" );
+                throw new Exception( "No IUnityContainer has been registered to resolve awakable subscribers (use ContainerProvider.Register method)" );
 
-            var subscribersAwake = _subscribers.Cast<EventHandler<T>>()
-                                        .Select( s => new Tuple<Type, string>( s.Target.GetType(), s.Method.Name ) )
-                                        .ToArray();
+            var awakeSubscribers = _subscribers.Cast<EventHandler<T>>()
+                                               .Select(s => new Tuple<Type, string>(s.Target.GetType(), s.Method.Name))
+                                               .ToArray();
 
             foreach ( var subscriber in subscribersToAwake )
             {
-                if ( subscribersAwake.Contains( new Tuple<Type, string>( subscriber.Item1, subscriber.Item2.Subscriber.Name ) ) )
+                if ( awakeSubscribers.Contains( new Tuple<Type, string>( subscriber.Item1, subscriber.Item2.Subscriber.Name ) ) )
                     continue;
 
                 // This will call another roundup of the builder
@@ -227,7 +227,8 @@ namespace EventBrokerExtension.EventBroker
 
                 _subscribers.Add( @delegate );
             }
-            ResolvingWakeupSubscribers = false;
+
+            ResolvingAwakableSubscribers = false;
         }
 
         /// <summary>   Queries if a given guard event exists. </summary>

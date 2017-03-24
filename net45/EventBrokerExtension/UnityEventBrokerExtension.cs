@@ -52,10 +52,20 @@ namespace EventBrokerExtension
         }
     }
 
+    /// <summary>
+    /// EventBrokerWakeupStrategy
+    /// </summary>
+    /// <seealso cref="Microsoft.Practices.ObjectBuilder2.BuilderStrategy" />
     public class EventBrokerWakeupStrategy : BuilderStrategy
     {
-        private static IEnumerable<MethodInfo> WakeupEventsCache { get; set; }
+        private static IEnumerable<MethodInfo> AwakableEventsCache { get; set; }
 
+        /// <summary>
+        /// Called during the chain of responsibility for a build operation. The
+        /// PreBuildUp method is called when the chain is being executed in the
+        /// forward direction.
+        /// </summary>
+        /// <param name="context">Context of the build operation.</param>
         public override void PreBuildUp(IBuilderContext context)
         {
             if ( context.Policies.Get<IEventBrokerInfoPolicy>( context.BuildKey ) == null )
@@ -63,15 +73,15 @@ namespace EventBrokerExtension
                 var policy = new EventBrokerInfoPolicy();
                 context.Policies.Set<IEventBrokerInfoPolicy>( policy, context.BuildKey );
 
-                AddWakeupSubscriptionsToPolicy( context.BuildKey, policy );
+                AddAwakableSubscriptionsToPolicy( context.BuildKey, policy );
             }
         }
 
-        private void AddWakeupSubscriptionsToPolicy( NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy )
+        private void AddAwakableSubscriptionsToPolicy( NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy )
         {
             var subscribedMethods = buildKey.Type.GetMethods().Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ).ToArray();
 
-            var methods = GetWakeupSubscriberMethods( subscribedMethods );
+            var methods = GetAwakableSubscriberMethods( subscribedMethods );
 
             foreach ( var method in methods )
             {
@@ -79,26 +89,26 @@ namespace EventBrokerExtension
 
                 foreach ( var attr in attrs )
                 {
-                    if ( attr?.WakeUp == true )
+                    if ( attr?.Awakable == true )
                         policy.AddSubscription( attr.EventName, method );
                 }
             }
         }
 
-        private IEnumerable<MethodInfo> GetWakeupSubscriberMethods( IEnumerable<MethodInfo> subscribedMethods )
+        private static IEnumerable<MethodInfo> GetAwakableSubscriberMethods( IEnumerable<MethodInfo> subscribedMethods )
         {
-            if ( WakeupEventsCache != null )
-                return WakeupEventsCache;
+            if ( AwakableEventsCache != null )
+                return AwakableEventsCache;
 
 
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            WakeupEventsCache = assemblies.SelectMany( GetLoadableTypes )
+            AwakableEventsCache = assemblies.SelectMany( GetLoadableTypes )
                 .SelectMany( t => t.GetMethods( BindingFlags.DeclaredOnly | BindingFlags.Public |
                                                BindingFlags.Instance )
                                    .Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ) )
                 .Where( m => subscribedMethods.Contains( m ) == false );
 
-            return WakeupEventsCache;
+            return AwakableEventsCache;
         }
 
         private static IEnumerable<Type> GetLoadableTypes( Assembly assembly )

@@ -69,7 +69,7 @@ namespace EventBrokerExtension
 
         public Type EventArgsType { get; }
 
-        public bool CanWakeUp { get; }
+        public bool Awakable { get; }
 
         public bool IsAwake { get; set; }
 
@@ -78,7 +78,7 @@ namespace EventBrokerExtension
         /// </summary>
         /// <param name="publishedEventName">Name of the published event.</param>
         /// <param name="subscriber">The subscriber.</param>
-        /// <param name="canWakeUp">if set to <c>true</c> [can wake up].</param>
+        /// <param name="awakable">if set to <c>true</c> [can wake up].</param>
         /// <param name="isAwake">if set to <c>true</c> [is awake].</param>
         /// <exception cref="System.Exception">
         /// Subscriber method must have an EventArgs parameter as the second argument
@@ -86,11 +86,11 @@ namespace EventBrokerExtension
         /// <remarks>
         /// Sander.struijk, 14.05.2014.
         /// </remarks>
-        public SubscriptionInfo(string publishedEventName, MethodInfo subscriber, bool canWakeUp = false, bool isAwake = false)
+        public SubscriptionInfo(string publishedEventName, MethodInfo subscriber, bool awakable = false, bool isAwake = false)
         {
             PublishedEventName = publishedEventName;
             Subscriber = subscriber;
-            CanWakeUp = canWakeUp;
+            Awakable = awakable;
             IsAwake = isAwake;
 
             try

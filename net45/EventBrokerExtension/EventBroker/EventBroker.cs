@@ -87,7 +87,7 @@ namespace EventBrokerExtension.EventBroker
         public void RegisterWakeupSubscriber(Type declaringType, SubscriptionInfo sub)
         {
             var publishedEvent = GetEvent(sub.PublishedEventName);
-            publishedEvent.AddWakeupSubscriber(declaringType, sub);
+            publishedEvent.AddAwakableSubscriber(declaringType, sub);
         }
 
         /// <summary>   Unregisters the subscriber. </summary>

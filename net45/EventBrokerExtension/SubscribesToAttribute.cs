@@ -29,7 +29,7 @@ namespace EventBrokerExtension
         /// <value>
         ///   <c>true</c> if [wake up]; otherwise, <c>false</c>.
         /// </value>
-        public bool WakeUp { get; set; }
+        public bool Awakable { get; set; }
 
         /// <summary>   Constructor. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
