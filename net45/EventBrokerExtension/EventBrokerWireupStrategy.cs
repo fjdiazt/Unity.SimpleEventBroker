@@ -55,12 +55,6 @@ namespace EventBrokerExtension
             }
         }
 
-        /// <summary>
-        /// Called during the chain of responsibility for a build operation. The
-        /// PostBuildUp method is called when the chain has finished the PreBuildUp
-        /// phase and executes in reverse order from the PreBuildUp calls.
-        /// </summary>
-        /// <param name="context">Context of the build operation.</param>
         public override void PostBuildUp(IBuilderContext context)
         {
             BuildingUp = false;
@@ -128,36 +122,6 @@ namespace EventBrokerExtension
             if(broker == null)
                 throw new InvalidOperationException("No event broker available");
             return broker;
-        }
-
-        private IEnumerable<MethodInfo> GetWakeupSubscriberMethods()
-        {
-            if ( WakeupEventsCache != null )
-                return WakeupEventsCache;
-
-            WakeupEventsCache = AppDomain
-                .CurrentDomain
-                .GetAssemblies()
-                .SelectMany(GetLoadableTypes)
-                .SelectMany(t => t.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public |
-                                              BindingFlags.Instance)
-                                  .Where(m => m.IsDefined(typeof(SubscribesToAttribute))))
-                .Where(m => m.GetCustomAttributes<SubscribesToAttribute>()
-                             .Any(a => a.Awakable));
-
-            return WakeupEventsCache;
-        }
-
-        private static IEnumerable<Type> GetLoadableTypes( Assembly assembly )
-        {
-            try
-            {
-                return assembly.GetTypes().Where( t => t.IsPublic && t.IsDefined( typeof( SubscriberAttribute ) ) );
-            }
-            catch ( ReflectionTypeLoadException e )
-            {
-                return e.Types.Where( t => t != null );
-            }
         }
     }
 }

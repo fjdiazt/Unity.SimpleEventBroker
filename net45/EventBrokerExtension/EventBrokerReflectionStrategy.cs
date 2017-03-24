@@ -131,7 +131,7 @@ namespace EventBrokerExtension
 
                 foreach ( var attr in attrs )
                 {
-                    var isNew = attr.Awakable &&
+                    var isNew = attr.Awake &&
                                 !policy.Subscriptions
                                        .Any( p => p.Subscriber.Name == method.Name &&
                                                   p.PublishedEventName == attr.EventName &&
@@ -139,7 +139,7 @@ namespace EventBrokerExtension
                                                   p.IsAwake == false );
                     if ( isNew )
                     {
-                        policy.AddSubscription( attr.EventName, method, attr.Awakable );
+                        policy.AddSubscription( attr.EventName, method, attr.Awake );
                     }
                 }
             }

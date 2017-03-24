@@ -11,10 +11,9 @@
 
 #region Using statements
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using EventBrokerExtension.Providers;
 using Microsoft.Practices.ObjectBuilder2;
 using Microsoft.Practices.Unity;
 using Microsoft.Practices.Unity.ObjectBuilder;
@@ -58,15 +57,13 @@ namespace EventBrokerExtension
     /// <seealso cref="Microsoft.Practices.ObjectBuilder2.BuilderStrategy" />
     public class EventBrokerWakeupStrategy : BuilderStrategy
     {
-        private static IEnumerable<MethodInfo> AwakableEventsCache { get; set; }
-
         /// <summary>
         /// Called during the chain of responsibility for a build operation. The
         /// PreBuildUp method is called when the chain is being executed in the
         /// forward direction.
         /// </summary>
         /// <param name="context">Context of the build operation.</param>
-        public override void PreBuildUp(IBuilderContext context)
+        public override void PreBuildUp( IBuilderContext context )
         {
             if ( context.Policies.Get<IEventBrokerInfoPolicy>( context.BuildKey ) == null )
             {
@@ -81,7 +78,7 @@ namespace EventBrokerExtension
         {
             var subscribedMethods = buildKey.Type.GetMethods().Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ).ToArray();
 
-            var methods = GetAwakableSubscriberMethods( subscribedMethods );
+            var methods = AwakableSubcribersProvider.Subscribers.Where( m => !subscribedMethods.Contains( m ) );
 
             foreach ( var method in methods )
             {
@@ -89,37 +86,9 @@ namespace EventBrokerExtension
 
                 foreach ( var attr in attrs )
                 {
-                    if ( attr?.Awakable == true )
+                    if ( attr?.Awake == true )
                         policy.AddSubscription( attr.EventName, method );
                 }
-            }
-        }
-
-        private static IEnumerable<MethodInfo> GetAwakableSubscriberMethods( IEnumerable<MethodInfo> subscribedMethods )
-        {
-            if ( AwakableEventsCache != null )
-                return AwakableEventsCache;
-
-
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            AwakableEventsCache = assemblies.SelectMany( GetLoadableTypes )
-                .SelectMany( t => t.GetMethods( BindingFlags.DeclaredOnly | BindingFlags.Public |
-                                               BindingFlags.Instance )
-                                   .Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ) )
-                .Where( m => subscribedMethods.Contains( m ) == false );
-
-            return AwakableEventsCache;
-        }
-
-        private static IEnumerable<Type> GetLoadableTypes( Assembly assembly )
-        {
-            try
-            {
-                return assembly.GetTypes().Where( t => t.IsPublic && t.IsDefined( typeof( SubscriberAttribute ) ) );
-            }
-            catch ( ReflectionTypeLoadException e )
-            {
-                return e.Types.Where( t => t != null );
             }
         }
     }
