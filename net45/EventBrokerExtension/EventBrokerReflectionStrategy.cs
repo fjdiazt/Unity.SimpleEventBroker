@@ -27,8 +27,6 @@ namespace EventBrokerExtension
     {
         private static IEnumerable<MethodInfo> WakeupEventsCache { get; set; }
 
-        private List<Type> MyList { get; } = new List<Type>();
-
         /// <summary>   Pre build up. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="context">  The context. </param>
@@ -54,10 +52,10 @@ namespace EventBrokerExtension
             }
         }
 
-        public override void PostBuildUp( IBuilderContext context )
-        {
-            base.PostBuildUp( context );
-        }
+        //public override void PostBuildUp( IBuilderContext context )
+        //{
+        //    base.PostBuildUp( context );
+        //}
 
         /// <summary>   Adds the publications to policy to 'policy'. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
