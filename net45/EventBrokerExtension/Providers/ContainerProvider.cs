@@ -1,6 +1,6 @@
 ﻿using Microsoft.Practices.Unity;
 
-namespace EventBrokerExtension.Providers
+namespace Unity.EventBroker.Providers
 {
     /// <summary>
     /// The Unity Container provider to resolve types that can awake automatically.

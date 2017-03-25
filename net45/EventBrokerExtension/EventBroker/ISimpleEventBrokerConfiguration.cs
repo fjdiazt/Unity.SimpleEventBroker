@@ -15,7 +15,7 @@ using Microsoft.Practices.Unity;
 
 #endregion
 
-namespace EventBrokerExtension
+namespace Unity.EventBroker
 {
     /// <summary>   Interface for simple event broker configuration. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
@@ -23,6 +23,6 @@ namespace EventBrokerExtension
     {
         /// <summary>   Gets the broker. </summary>
         /// <value> The broker. </value>
-        EventBroker.EventBroker Broker { get; }
+        EventBroker Broker { get; }
     }
 }

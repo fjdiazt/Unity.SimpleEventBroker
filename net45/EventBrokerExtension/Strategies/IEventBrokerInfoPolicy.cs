@@ -18,7 +18,7 @@ using Microsoft.Practices.ObjectBuilder2;
 
 #endregion
 
-namespace EventBrokerExtension
+namespace Unity.EventBroker.Strategies
 {
     /// <summary>
     ///     This policy interface allows access to saved publication and subscription

@@ -15,7 +15,7 @@ using System;
 
 #endregion
 
-namespace EventBrokerExtension
+namespace Unity.EventBroker.Attributes
 {
     /// <summary>
     ///     Base class for the two publish / subscribe attributes. Stores the event name to

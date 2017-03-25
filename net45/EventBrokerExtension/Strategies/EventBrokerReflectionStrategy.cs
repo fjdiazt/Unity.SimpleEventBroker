@@ -11,22 +11,21 @@
 
 #region Using statements
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Practices.ObjectBuilder2;
+using Unity.EventBroker.Attributes;
+using Unity.EventBroker.Providers;
 
 #endregion
 
-namespace EventBrokerExtension
+namespace Unity.EventBroker.Strategies
 {
     /// <summary>   An event broker reflection strategy. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     public class EventBrokerReflectionStrategy : BuilderStrategy
     {
-        private static IEnumerable<MethodInfo> WakeupEventsCache { get; set; }
-
         /// <summary>   Pre build up. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="context">  The context. </param>
@@ -61,7 +60,7 @@ namespace EventBrokerExtension
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="buildKey"> The build key. </param>
         /// <param name="policy">   The policy. </param>
-        private void AddPublicationsToPolicy( NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy )
+        private static void AddPublicationsToPolicy( NamedTypeBuildKey buildKey, EventBrokerInfoPolicy policy )
         {
             if ( buildKey.Type.IsDefined( typeof( PublisherAttribute ) ) == false )
                 return;
@@ -81,8 +80,8 @@ namespace EventBrokerExtension
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="buildKey"> The build key. </param>
         /// <param name="policy">   The policy. </param>
-        private IEnumerable<SubscriptionInfo> AddSubscriptionsToPolicy( NamedTypeBuildKey buildKey,
-                                                                EventBrokerInfoPolicy policy )
+        private static IEnumerable<SubscriptionInfo> AddSubscriptionsToPolicy( NamedTypeBuildKey buildKey,
+                                                                               EventBrokerInfoPolicy policy )
         {
             if ( buildKey.Type.IsDefined( typeof( SubscriberAttribute ) ) == false )
                 return new SubscriptionInfo[ 0 ];
@@ -119,7 +118,7 @@ namespace EventBrokerExtension
                 .SelectMany( a => (PublishesAttribute[])a.GetCustomAttributes( typeof( PublishesAttribute ), false ) )
                 .Select( a => a.EventName );
 
-            var methods = GetWakeupSubscriberMethods()
+            var methods = AwakableSubcribersProvider.Subscribers
                 .Where( m => ( (SubscribesToAttribute[])m.GetCustomAttributes( typeof( SubscribesToAttribute ),
                                                                               false ) )
                                  .Any( a => publishedNames.Contains( a.EventName ) ) )
@@ -142,37 +141,6 @@ namespace EventBrokerExtension
                         policy.AddSubscription( attr.EventName, method, attr.Awake );
                     }
                 }
-            }
-        }
-
-        private IEnumerable<MethodInfo> GetWakeupSubscriberMethods()
-        {
-            if ( WakeupEventsCache != null )
-                return WakeupEventsCache;
-
-            WakeupEventsCache = AppDomain
-                .CurrentDomain
-                .GetAssemblies()
-                .Where( a => !a.FullName.StartsWith( "Microsoft" )
-                             && !a.FullName.StartsWith( "System" )
-                             && !a.FullName.StartsWith( "Common" ) )
-                .SelectMany( GetLoadableTypes )
-                .Where( t => t.IsDefined( typeof( SubscriberAttribute ), false ) )
-                .SelectMany( t => t.GetMethods()
-                                   .Where( m => m.IsDefined( typeof( SubscribesToAttribute ) ) ) );
-
-            return WakeupEventsCache;
-        }
-
-        private static IEnumerable<Type> GetLoadableTypes( Assembly assembly )
-        {
-            try
-            {
-                return assembly.GetTypes().Where( t => t.IsPublic && t.IsDefined( typeof( SubscriberAttribute ) ) );
-            }
-            catch ( ReflectionTypeLoadException e )
-            {
-                return e.Types.Where( t => t != null );
             }
         }
     }

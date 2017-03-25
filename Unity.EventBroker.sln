@@ -12,7 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{E2B8DC
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "net461", "net461", "{62807B9E-7CD0-461E-A330-229F45306A02}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventBrokerExtension", "net45\EventBrokerExtension\EventBrokerExtension.csproj", "{7AFCAE67-5F08-4807-B7F4-C121F5776616}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.EventBroker", "net45\EventBrokerExtension\Unity.EventBroker.csproj", "{7AFCAE67-5F08-4807-B7F4-C121F5776616}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "netcore451", "netcore451", "{3B67CD5A-0CB5-4D40-BEF2-9358CF757D5F}"
 EndProject

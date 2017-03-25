@@ -15,12 +15,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using EventBrokerExtension.Providers;
 using Microsoft.Practices.Unity;
+using Unity.EventBroker.Attributes;
+using Unity.EventBroker.Providers;
+using Unity.EventBroker.Strategies;
 
 #endregion
 
-namespace EventBrokerExtension.EventBroker
+namespace Unity.EventBroker
 {
     /// <summary>
     /// A published event.

@@ -15,7 +15,7 @@ using System;
 
 #endregion
 
-namespace EventBrokerExtension
+namespace Unity.EventBroker.Attributes
 {
     /// <summary>   Attribute for publishes. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>

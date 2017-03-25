@@ -16,10 +16,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Practices.ObjectBuilder2;
+using Unity.EventBroker.Attributes;
 
 #endregion
 
-namespace Unity.EventBroker
+namespace Unity.EventBroker.Strategies
 {
     /// <summary>   An event broker wireup strategy. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
@@ -61,7 +62,7 @@ namespace Unity.EventBroker
             base.PostBuildUp(context);
         }
 
-        private void BuildPublications(IBuilderContext context, EventBroker.EventBroker broker, IEventBrokerInfoPolicy policy)
+        private void BuildPublications(IBuilderContext context, EventBroker broker, IEventBrokerInfoPolicy policy)
         {
             var registerPublisher = broker.GetType().GetMethod( nameof( broker.RegisterPublisher ) );
 
@@ -74,7 +75,7 @@ namespace Unity.EventBroker
             }
         }
 
-        private void BuildSubscriptions(IBuilderContext context, EventBroker.EventBroker broker, 
+        private void BuildSubscriptions(IBuilderContext context, EventBroker broker, 
                                                IEventBrokerInfoPolicy policy)
         {
             var registerSubscriber = broker.GetType().GetMethod( nameof( broker.RegisterSubscriber ) );
@@ -116,9 +117,9 @@ namespace Unity.EventBroker
         /// </exception>
         /// <param name="context">  The context. </param>
         /// <returns>   The broker. </returns>
-        private EventBroker.EventBroker GetBroker(IBuilderContext context)
+        private EventBroker GetBroker(IBuilderContext context)
         {
-            var broker = context.NewBuildUp<EventBroker.EventBroker>();
+            var broker = context.NewBuildUp<EventBroker>();
             if(broker == null)
                 throw new InvalidOperationException("No event broker available");
             return broker;

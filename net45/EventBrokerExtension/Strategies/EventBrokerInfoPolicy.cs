@@ -16,7 +16,7 @@ using System.Reflection;
 
 #endregion
 
-namespace EventBrokerExtension
+namespace Unity.EventBroker.Strategies
 {
     /// <summary>   An event broker information policy. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>

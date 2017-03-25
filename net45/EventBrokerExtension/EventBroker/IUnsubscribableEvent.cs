@@ -1,4 +1,4 @@
-﻿namespace EventBrokerExtension
+﻿namespace Unity.EventBroker
 {
     /// <summary>
     /// An event that can be flagged to be unsubscribed automatically by the Event Broker

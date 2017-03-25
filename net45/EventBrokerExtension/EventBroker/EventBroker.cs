@@ -14,25 +14,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Practices.Unity;
+using Unity.EventBroker.Strategies;
 
 #endregion
 
-namespace EventBrokerExtension.EventBroker
+namespace Unity.EventBroker
 {
     /// <summary>   An event broker. </summary>
     /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
     public class EventBroker
     {
-        private IUnityContainer Container { get; }
-
         /// <summary>   The event publishers. </summary>
-        private readonly Dictionary<string, PublishedEvent> eventPublishers = new Dictionary<string, PublishedEvent>();
-
-        public EventBroker(IUnityContainer container)
-        {
-            Container = container;
-        }
+        private readonly Dictionary<string, PublishedEvent> _eventPublishers = new Dictionary<string, PublishedEvent>();
 
         /// <summary>   Gets the registered events. </summary>
         /// <value> The registered events. </value>
@@ -40,7 +33,7 @@ namespace EventBrokerExtension.EventBroker
         {
             get
             {
-                foreach(var eventName in eventPublishers.Keys)
+                foreach(var eventName in _eventPublishers.Keys)
                 {
                     yield return eventName;
                 }
@@ -84,7 +77,12 @@ namespace EventBrokerExtension.EventBroker
             publishedEvent.AddSubscriber(subscriber);
         }
 
-        public void RegisterWakeupSubscriber(Type declaringType, SubscriptionInfo sub)
+        /// <summary>
+        /// Registers the wakeup subscriber.
+        /// </summary>
+        /// <param name="declaringType">Type of the declaring.</param>
+        /// <param name="sub">The sub.</param>
+        public void RegisterAwakableSubscriber(Type declaringType, SubscriptionInfo sub)
         {
             var publishedEvent = GetEvent(sub.PublishedEventName);
             publishedEvent.AddAwakableSubscriber(declaringType, sub);
@@ -117,7 +115,7 @@ namespace EventBrokerExtension.EventBroker
             }
         }
 
-        /// <summary>   Gets the subscribers fors in this collection. </summary>
+        /// <summary>   Gets the subscribers for in this collection. </summary>
         /// <remarks>   Sander.struijk, 14.05.2014. </remarks>
         /// <param name="publishedEvent">   The published event. </param>
         /// <returns>
@@ -138,9 +136,9 @@ namespace EventBrokerExtension.EventBroker
         /// <returns>   The event. </returns>
         private PublishedEvent GetEvent(string eventName)
         {
-            if(!eventPublishers.ContainsKey(eventName))
-                eventPublishers[eventName] = new PublishedEvent(this);
-            return eventPublishers[eventName];
+            if(!_eventPublishers.ContainsKey(eventName))
+                _eventPublishers[eventName] = new PublishedEvent(this);
+            return _eventPublishers[eventName];
         }
 
         /// <summary>   Removes the dead events. </summary>
@@ -148,22 +146,31 @@ namespace EventBrokerExtension.EventBroker
         private void RemoveDeadEvents()
         {
             var deadEvents = new List<string>();
-            foreach(var publishedEvent in eventPublishers)
+            foreach(var publishedEvent in _eventPublishers)
             {
                 if(!publishedEvent.Value.HasPublishers && !publishedEvent.Value.HasSubscribers)
                     deadEvents.Add(publishedEvent.Key);
             }
 
-            deadEvents.ForEach(delegate(string eventName) { eventPublishers.Remove(eventName); });
+            deadEvents.ForEach(delegate(string eventName) { _eventPublishers.Remove(eventName); });
+        }
+
+        /// <summary>
+        /// Cleans up dead publishers and subscribers.
+        /// </summary>
+        public void CleanUp()
+        {
+            UnregisterFlaggedPublishers();
+            UnregisterFlaggedSubscribers();
         }
 
         /// <summary>
         /// Unregisters the publishers implementing the IUnsubscribable event that have been
         /// flagged.
         /// </summary>
-        public void UnregisterFlaggedPublishers()
+        private void UnregisterFlaggedPublishers()
         {
-            foreach ( var kvp in eventPublishers )
+            foreach ( var kvp in _eventPublishers )
             {
                 var removedPublishers = new List<object>();
 
@@ -190,9 +197,9 @@ namespace EventBrokerExtension.EventBroker
         /// Unregisters the subscribers implementing the IUnsubscribable event that have been
         /// flagged.
         /// </summary>
-        public void UnregisterFlaggedSubscribers()
+        private void UnregisterFlaggedSubscribers()
         {
-            foreach ( var kvp in eventPublishers )
+            foreach ( var kvp in _eventPublishers )
             {
                 var removedSubscribers = new List<object>();
 
